@@ -183,7 +183,7 @@
       "maxWidth": 100,
       "minHeight": 50,
       "maxHeight": 50,
-      "refHeigth": 50,
+      "refHeight": 50,
       "refWidth": 100,
       "qty": 100,
       "value": 0.9,
