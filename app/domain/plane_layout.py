@@ -9,15 +9,21 @@
     bottom: [wood.width + wood.height, 2*wood.width + wood.height)
     left:   [2*wood.width + wood.height, 2*wood.width + 2*wood.height)
 
-各面的 DefectInstance.bbox = [x, y, w, h]，其中：
-  x：沿木材长度方向的起点（与平面坐标系 X 轴一致，无需转换）。
-  y：垂直于长度方向、沿该面展开的起点。
+输入坐标系（相机坐标，木材在画面中竖放）：
+  - 外部传入的 DefectInstance.bbox = [x_img, y_img, w_img, h_img]：
+      x_img：水平方向（沿截面宽度）起点；
+      y_img：竖直方向（沿木材长度）起点；
+      w_img：水平方向尺寸（沿截面宽度）；
+      h_img：竖直方向尺寸（沿木材长度）。
 
-转换规则：
-  x_plane = x_face          （X 轴不变）
-  y_plane = face_offset + y_face
-  w_plane = w_face           （沿 X 方向的宽度不变）
-  h_plane = h_face           （沿该面 Y 方向的高度不变）
+  - 当前 demo 中默认 1:1 比例：x/y/w/h 与物理 mm 一致，
+    且满足：x_img + w_img <= wood.width,  y_img + h_img <= wood.length。
+
+转换到统一展开平面坐标系的规则：
+  x_plane = y_img              （沿木材长度方向）
+  y_plane = face_offset + x_img
+  w_plane = h_img              （沿木材长度方向的尺寸）
+  h_plane = w_img              （沿该面展开方向的尺寸）
 """
 
 from __future__ import annotations
@@ -47,7 +53,10 @@ def flatten_defects(wood: Wood) -> list[FlattenedDefect]:
     """
     将 Wood.defectDetails 中四个面的缺陷全部映射到统一展开平面坐标系。
 
-    返回 FlattenedDefect 列表，其中 bbox_on_plane = [x, y, w, h]（平面坐标）。
+    输入 bbox 使用相机坐标（木材竖向）：
+      [x_img, y_img, w_img, h_img]
+
+    输出 FlattenedDefect.bbox_on_plane = [x, y, w, h] 使用统一展开平面坐标。
     """
     result: list[FlattenedDefect] = []
 
@@ -63,8 +72,12 @@ def flatten_defects(wood: Wood) -> list[FlattenedDefect]:
         y_offset = _face_y_offset(face, wood.width, wood.height)
         defects = face_defects[face]
         for d in defects:
-            x, y, w, h = d.bbox
-            bbox_on_plane = [x, y_offset + y, w, h]
+            x_img, y_img, w_img, h_img = d.bbox
+            x_plane = float(y_img)
+            y_plane = y_offset + float(x_img)
+            w_plane = float(h_img)
+            h_plane = float(w_img)
+            bbox_on_plane = [x_plane, y_plane, w_plane, h_plane]
             result.append(
                 FlattenedDefect(
                     woodId=wood.wood_id,

@@ -1,55 +1,113 @@
 {
-    "orderId": "ORDER-DEMO-001",
-    "products": [
-      {
-        "id": "P1",
-        "minLength": 1900,
-        "maxLength": 2100,
-        "minWidth": 100,
-        "maxWidth": 100,
-        "minHeight": 50,
-        "maxHeight": 50,
-        "refHeight": 50,
-        "refWidth": 100,
-        "qty": 10,
-        "value": 0.9,
-        "sections": [
-          {
-            "id": "S1",
-            "begin": 0,
-            "length": 2000,
-            "zones": [
-              {
-                "id": "Z1-top",
-                "begin": 0,
-                "length": 100,
-                "defectRules": [
-                  {
-                    "defectName": "Blackknot",
-                    "maxCount": 2,
-                    "defectLength": 30,
-                    "defectHeight": 30,
-                    "referenceLength": 1000
-                  }
-                ]
-              },
-              {
-                "id": "Z2-right",
-                "begin": 100,
-                "length": 50,
-                "defectRules": [
-                  {
-                    "defectName": "Crack",
-                    "maxCount": 1,
-                    "defectLength": 50,
-                    "defectHeight": 20,
-                    "referenceLength": 1000
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  }
+  "orderId": "ORDER-DEMO-MULTI-001",
+  "products": [
+    {
+      "id": "P1",
+      "minLength": 500,
+      "maxLength": 500,
+      "minWidth": 100,
+      "maxWidth": 100,
+      "minHeight": 50,
+      "maxHeight": 50,
+      "refHeight": 50,
+      "refWidth": 100,
+      "qty": 10,
+      "value": 0.6,
+      "sections": [
+        {
+          "id": "S1",
+          "begin": 0,
+          "length": 500,
+          "zones": [
+            {
+              "id": "Z-all",
+              "begin": 0,
+              "length": 300,
+              "defectRules": [
+                {
+                  "defectName": "Knot",
+                  "maxCount": 3,
+                  "defectLength": 40,
+                  "defectHeight": 40,
+                  "referenceLength": 500
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P2",
+      "minLength": 1000,
+      "maxLength": 1000,
+      "minWidth": 100,
+      "maxWidth": 100,
+      "minHeight": 50,
+      "maxHeight": 50,
+      "refHeight": 50,
+      "refWidth": 100,
+      "qty": 10,
+      "value": 0.8,
+      "sections": [
+        {
+          "id": "S1",
+          "begin": 0,
+          "length": 1000,
+          "zones": [
+            {
+              "id": "Z-all",
+              "begin": 0,
+              "length": 300,
+              "defectRules": [
+                {
+                  "defectName": "Knot",
+                  "maxCount": 3,
+                  "defectLength": 40,
+                  "defectHeight": 40,
+                  "referenceLength": 1000
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P3",
+      "minLength": 2000,
+      "maxLength": 2000,
+      "minWidth": 100,
+      "maxWidth": 100,
+      "minHeight": 50,
+      "maxHeight": 50,
+      "refHeight": 50,
+      "refWidth": 100,
+      "qty": 10,
+      "value": 1.0,
+      "sections": [
+        {
+          "id": "S1",
+          "begin": 0,
+          "length": 2000,
+          "zones": [
+            {
+              "id": "Z-all",
+              "begin": 0,
+              "length": 300,
+              "defectRules": [
+                {
+                  "defectName": "Knot",
+                  "maxCount": 3,
+                  "defectLength": 40,
+                  "defectHeight": 40,
+                  "referenceLength": 2000
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
