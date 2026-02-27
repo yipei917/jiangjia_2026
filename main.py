@@ -6,6 +6,7 @@ FastAPI 应用入口
 from __future__ import annotations
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.orders import router as orders_router
@@ -21,6 +22,22 @@ app = FastAPI(
         "参见 system-architecture.md 了解完整系统设计。"
     ),
     version="0.1.0",
+)
+
+# ---------------------------------------------------------------------------
+# CORS（方便本地 React 前端访问）
+# ---------------------------------------------------------------------------
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # ---------------------------------------------------------------------------
