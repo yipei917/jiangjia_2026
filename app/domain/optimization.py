@@ -1,21 +1,20 @@
 """
-优化决策引擎（OptimizationEngine）— v1 贪心实现
+优化决策引擎（OptimizationEngine）— 贪心 + 规则引擎
 
-本版实现一个非常简单的启发式算法：
-  - 暂时忽略缺陷与 Zone/Section 规则（相当于 RuleEngine 恒通过），后续版本再接入。
-  - 按 product.value 从高到低排序产品。
-  - 沿着木材长度从左到右推进，每次在当前位置尝试放入“价值最高的产品”。
-  - 对当前产品，尽量使用它允许的最大长度（因为 value 按长度线性放大）。
-
-这样可以快速得到一个“按价值排序”的切割方案，用于打通端到端流程。
+  - 预过滤无效产品；缺陷按 x 排序并提取终点列表用于跳步。
+  - 从左到右推进，每步选 value 最大且通过缺陷规则的产品，按 minLength 切一段。
+  - 无可行产品时跳至下一缺陷终点再试，避免逐毫米扫描。
+  - N 段产生 N-1 个段间锯缝；最后一段不计末尾锯缝。
 """
 
 from __future__ import annotations
 
+import bisect
 from collections import Counter
 from typing import TYPE_CHECKING, List
 
-from app.domain.models import CutPiece, CuttingPlan, SatisfiedProduct
+from app.domain.models import CutPiece, CuttingPlan, Section, SatisfiedProduct
+from app.domain.rule_engine import check_piece as rule_check_piece
 from app.infrastructure.logger import get_logger
 
 if TYPE_CHECKING:
@@ -24,52 +23,65 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-def _effective_min_length(product: "Product", wood_length: float) -> float:
-    """
-    计算产品在当前木材上的“有效最小长度”。
-    若未配置 minLength，则视为 0。
-    """
+
+def _min_length(product: "Product") -> float:
     return float(product.min_length or 0.0)
 
 
-def _effective_max_length(product: "Product", wood_length: float) -> float:
-    """
-    计算产品在当前木材上的“有效最大长度”。
-    若未配置 maxLength，则视为整根木材长度。
-    """
-    return float(product.max_length or wood_length)
+def _piece_passes_rules(
+    product: "Product",
+    piece_begin: float,
+    piece_length: float,
+    sorted_defects: List["FlattenedDefect"],
+) -> bool:
+    """判断在 [piece_begin, piece_begin+piece_length] 上切出该产品是否满足缺陷规则。"""
+    if not product.sections:
+        return True
+    section = product.sections[0]
+    if not section.zones:
+        return True
+    piece_section = Section(
+        id=section.id,
+        begin=piece_begin,
+        length=piece_length,
+        zones=section.zones,
+    )
+    return rule_check_piece(product, piece_section, sorted_defects).passed
 
 
 def optimize(
     wood: "Wood",
     order: "Order",
-    flattened_defects: List["FlattenedDefect"],  # noqa: ARG001 - v1 未使用
+    flattened_defects: List["FlattenedDefect"],
 ) -> CuttingPlan:
     """
     对单根木材执行切割优化，返回切割方案。
 
-    v1 策略（无缺陷、几何简化版）：
-      1. 按 product.value 从高到低排序产品。
-      2. 从 x=0 开始向右推进当前位置 cur_x。
-      3. 在每个 cur_x，遍历所有“尚有剩余数量”的产品：
-           - 根据产品的 minLength/maxLength 以及剩余长度，计算可行的切割长度 L。
-           - 如果可行，计算该段的价值 = product.value * L。
-      4. 从可行产品中选择 product.value 最大的一个，切出该段并更新 cur_x。
-      5. 若在某个位置没有任何产品可行，则停止。
+    策略：
+      1. 预过滤：剔除 qty=0 或 minLength 超出木材长度的产品，按 value 降序排列。
+      2. 预处理：缺陷按 x0 排序；提取所有缺陷终点（x1）的去重升序列表用于跳步。
+      3. 从 x=0 向右推进 cur_x：
+           - 候选段长 = 产品 minLength；剩余长度 >= minLength 且通过规则引擎才可选。
+           - 选 value 最大（相同时选 minLength 更大）的产品，切一段后推进 cur_x。
+           - 若当前位置无任何产品通过，跳至下一缺陷终点再试，直到无终点可跳则结束。
+      4. 统计：N 段产生 N-1 个段间锯缝；wasteLength = 总长 - 产品总长 - 锯缝总长。
     """
+    wood_length = float(wood.length)
+    saw_kerf = float(getattr(order, "saw_kerf_mm", 0.0) or 0.0)
 
-    # 预处理：按价值从高到低排序产品
+    # 1. 预过滤：剔除无需求或放不下的产品，按 value 降序
     products_sorted: List["Product"] = sorted(
-        order.products,
+        [p for p in order.products if p.qty > 0 and _min_length(p) <= wood_length],
         key=lambda p: p.value,
         reverse=True,
     )
-
     remaining_qty = {p.id: p.qty for p in products_sorted}
 
-    pieces: List[CutPiece] = []
-    cur_x = 0.0
-    wood_length = float(wood.length)
+    # 2. 缺陷预处理：按 x0 排序；提取去重升序的缺陷终点列表
+    sorted_defects = sorted(flattened_defects, key=lambda d: float(d.bbox_on_plane[0]))
+    defect_x1s: List[float] = sorted(
+        {float(d.bbox_on_plane[0]) + float(d.bbox_on_plane[2]) for d in sorted_defects}
+    )
 
     logger.info(
         "开始执行贪心优化",
@@ -77,21 +89,15 @@ def optimize(
             "wood_id": wood.wood_id,
             "wood_length": wood_length,
             "product_count": len(products_sorted),
+            "defect_count": len(sorted_defects),
         },
     )
 
-    # 锯片厚度（mm）由订单传入，每切一刀损耗该长度
-    saw_kerf = float(getattr(order, "saw_kerf_mm", 0.0) or 0.0)
+    pieces: List[CutPiece] = []
+    cur_x = 0.0
 
     while cur_x < wood_length:
         remaining_length = wood_length - cur_x
-
-        # 剩余长度需至少能放下一个最小段长 + 本段后的锯缝
-        if remaining_length <= saw_kerf:
-            break
-        available_for_piece = remaining_length - saw_kerf
-
-        # 为当前起点 cur_x 选一个“最优产品”
         best_product = None
         best_length = 0.0
         best_value = 0.0
@@ -100,46 +106,41 @@ def optimize(
             if remaining_qty[product.id] <= 0:
                 continue
 
-            min_len = _effective_min_length(product, wood_length)
-            max_len = _effective_max_length(product, wood_length)
+            min_len = _min_length(product)
 
-            if available_for_piece < min_len:
+            # 最后一段不需要保留额外锯缝，直接与剩余长度比较
+            if remaining_length < min_len:
                 continue
 
-            # 段长不超过可用长度（已扣除锯缝与预留）
-            candidate_length = min(max_len, available_for_piece)
-            if candidate_length < min_len:
+            if not _piece_passes_rules(product, cur_x, min_len, sorted_defects):
                 continue
 
-            candidate_value = float(product.value) * candidate_length
-
-            # 选择 product.value 最大的产品；若相等则取更长的
-            if best_product is None:
+            candidate_value = float(product.value)
+            if best_product is None or candidate_value > best_value or (
+                candidate_value == best_value and min_len > best_length
+            ):
                 best_product = product
-                best_length = candidate_length
+                best_length = min_len
                 best_value = candidate_value
-            else:
-                if product.value > best_product.value or (
-                    product.value == best_product.value
-                    and candidate_length > best_length
-                ):
-                    best_product = product
-                    best_length = candidate_length
-                    best_value = candidate_value
 
         if best_product is None:
-            # 当前起点下没有任何可行产品，提前结束
-            logger.info(
-                "贪心优化结束：无可行产品",
-                extra={
-                    "wood_id": wood.wood_id,
-                    "cur_x": cur_x,
-                    "remaining_length": remaining_length,
-                },
-            )
-            break
+            # 跳步：找下一个缺陷终点，跳过当前缺陷遮挡区域
+            idx = bisect.bisect_right(defect_x1s, cur_x)
+            if idx < len(defect_x1s):
+                next_x = defect_x1s[idx]
+                logger.info(
+                    "无可行产品，跳步到下一缺陷终点",
+                    extra={"wood_id": wood.wood_id, "cur_x": cur_x, "next_x": next_x},
+                )
+                cur_x = next_x
+                continue
+            else:
+                logger.info(
+                    "贪心优化结束：无更多可跳步位置",
+                    extra={"wood_id": wood.wood_id, "cur_x": cur_x},
+                )
+                break
 
-        # 记录这一段
         piece = CutPiece(
             begin=cur_x,
             length=best_length,
@@ -147,8 +148,9 @@ def optimize(
             value=best_value,
         )
         pieces.append(piece)
-
         remaining_qty[best_product.id] -= 1
+
+        # 段间加锯缝；最后一段的锯缝在统计时不计入
         cur_x += best_length + saw_kerf
 
         logger.debug(
@@ -163,32 +165,26 @@ def optimize(
             },
         )
 
-        # 如果所有产品都已完成需求，则可以提前结束
         if all(qty <= 0 for qty in remaining_qty.values()):
-            logger.info(
-                "贪心优化结束：已满足所有产品数量需求",
-                extra={"wood_id": wood.wood_id},
-            )
+            logger.info("贪心优化结束：已满足所有产品数量需求", extra={"wood_id": wood.wood_id})
             break
 
+    # 统计：N 段产生 N-1 个段间锯缝，最后一段不计末尾锯缝
+    n = len(pieces)
     total_used_length = sum(p.length for p in pieces)
+    total_kerf_mm = max(0, n - 1) * saw_kerf
+    waste_length = max(0.0, wood_length - total_used_length - total_kerf_mm)
     total_value = sum(p.value for p in pieces)
-    # 锯缝只作“段间间隔”，不单独占位；锯缝导致的损耗统一算入废料
-    # 废料 = 木材总长 - 产品总长（含段间锯缝+尾部未用）
-    total_kerf_mm = cur_x - total_used_length  # 段间锯缝总长，便于统计
-    waste_length = max(0.0, wood_length - total_used_length)
 
     produced_counter = Counter(p.product_id for p in pieces)
-    satisfied_products: List[SatisfiedProduct] = []
-    for product in order.products:
-        produced_qty = int(produced_counter.get(product.id, 0))
-        satisfied_products.append(
-            SatisfiedProduct(
-                productId=product.id,
-                producedQty=produced_qty,
-                requiredQty=product.qty,
-            )
+    satisfied_products: List[SatisfiedProduct] = [
+        SatisfiedProduct(
+            productId=product.id,
+            producedQty=int(produced_counter.get(product.id, 0)),
+            requiredQty=product.qty,
         )
+        for product in order.products
+    ]
 
     plan = CuttingPlan(
         woodId=wood.wood_id,
@@ -204,7 +200,7 @@ def optimize(
         "贪心优化完成",
         extra={
             "wood_id": wood.wood_id,
-            "piece_count": len(pieces),
+            "piece_count": n,
             "total_used_length": total_used_length,
             "total_kerf_mm": total_kerf_mm,
             "waste_length": waste_length,
@@ -212,4 +208,3 @@ def optimize(
     )
 
     return plan
-

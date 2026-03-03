@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import bisect
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Dict, List
 
@@ -59,11 +60,9 @@ def check_piece(
     sec_x0 = float(section.begin)
     sec_x1 = sec_x0 + float(section.length)
 
-    def rect_intersect(
-        ax0: float, ax1: float, ay0: float, ay1: float, bx0: float, bx1: float, by0: float, by1: float
-    ) -> bool:
-        """判断两个轴对齐矩形是否有交集。"""
-        return (ax0 < bx1 and ax1 > bx0) and (ay0 < by1 and ay1 > by0)
+    # 空间索引：按缺陷 x0 排序，用 bisect 快速收窄 X 候选范围（O(log n)）
+    defects_sorted = sorted(flattened_defects, key=lambda d: float(d.bbox_on_plane[0]))
+    x0_list = [float(d.bbox_on_plane[0]) for d in defects_sorted]
 
     for zone in section.zones:
         z_x0 = sec_x0
@@ -71,15 +70,17 @@ def check_piece(
         z_y0 = float(zone.begin)
         z_y1 = z_y0 + float(zone.length)
 
-        # 1) 找到落在该 Zone 矩形内（有交集）的缺陷
+        # 1) X 轴粗过滤：只保留 x0 < z_x1 的缺陷，再按 x1 > z_x0 细过滤
+        right_idx = bisect.bisect_left(x0_list, z_x1)  # x0 >= z_x1 的第一个位置
         defects_in_zone: List[FD] = []
-        for d in flattened_defects:
+        for d in defects_sorted[:right_idx]:
             dx, dy, dw, dh = d.bbox_on_plane
             dx0 = float(dx)
             dx1 = dx0 + float(dw)
             dy0 = float(dy)
             dy1 = dy0 + float(dh)
-            if rect_intersect(z_x0, z_x1, z_y0, z_y1, dx0, dx1, dy0, dy1):
+            # X 细过滤：x1 > z_x0；Y 过滤：有交集
+            if dx1 > z_x0 and dy0 < z_y1 and dy1 > z_y0:
                 defects_in_zone.append(d)
 
         # 按 defect_class 分组

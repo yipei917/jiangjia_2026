@@ -8,14 +8,12 @@ function pretty(obj) {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('order'); // 'order' | 'wood'
+  const [activeTab, setActiveTab] = useState('order');
 
-  // 订单页状态
   const [orderJson, setOrderJson] = useState(pretty(demoOrderJson));
   const [orderResult, setOrderResult] = useState('');
   const [orderLoading, setOrderLoading] = useState(false);
 
-  // 木材页状态
   const [selectedWoodId, setSelectedWoodId] = useState(demoWoods[0]?.woodId ?? '');
   const selectedWood = useMemo(
     () => demoWoods.find((w) => w.woodId === selectedWoodId) ?? demoWoods[0],
@@ -38,7 +36,11 @@ export default function App() {
       const data = await res.json();
       setOrderResult(pretty(data));
     } catch (e) {
-      setOrderResult(`错误: ${String(e)}`);
+      const msg =
+        e?.message?.includes('fetch') || e?.name === 'TypeError'
+          ? `请求失败（请确认后端已启动：在项目根目录运行 python main.py，监听 8765 端口）\n${String(e)}`
+          : String(e);
+      setOrderResult(`错误: ${msg}`);
     } finally {
       setOrderLoading(false);
     }
@@ -59,231 +61,214 @@ export default function App() {
       setWoodResultText(pretty(data));
       setWoodResponse(data);
     } catch (e) {
-      setWoodResultText(`错误: ${String(e)}`);
+      const msg =
+        e?.message?.includes('fetch') || e?.name === 'TypeError'
+          ? `请求失败（请确认后端已启动：在项目根目录运行 python main.py，监听 8765 端口）\n${String(e)}`
+          : String(e);
+      setWoodResultText(`错误: ${msg}`);
     } finally {
       setWoodLoading(false);
     }
   }
 
+  const plan = woodResponse?.cutting_plan;
+  const flattenedDefects = woodResponse?.flattened_defects ?? woodResponse?.flattenedDefects ?? [];
+  const woodLength = selectedWood?.length ?? 0;
+  const woodWidth = selectedWood?.width ?? 100;
+  const woodHeight = selectedWood?.height ?? 50;
+  const planeHeight = 2 * woodWidth + 2 * woodHeight;
+
   return (
     <div className="page">
       <header className="header">
-        <h1>木材切割优化 Demo UI</h1>
-        <p>简单 React 界面：一页管理订单，一页查看木材切割方案和缺陷展开图。</p>
-        <p className="tip">请先启动后端：python main.py （端口 8765）。</p>
+        <h1>木材智能切割优化 Demo</h1>
+        <p>订单配置与木材切割方案</p>
+        <p className="tip">后端地址: {API_BASE}</p>
       </header>
+
       <div className="tabs">
         <button
+          type="button"
           className={`tab-btn ${activeTab === 'order' ? 'active' : ''}`}
           onClick={() => setActiveTab('order')}
         >
           订单配置
         </button>
         <button
+          type="button"
           className={`tab-btn ${activeTab === 'wood' ? 'active' : ''}`}
           onClick={() => setActiveTab('wood')}
         >
-          木材切割与展开图
+          木材切割
         </button>
       </div>
 
       {activeTab === 'order' && (
-        <main className="layout single">
-          <section className="panel">
-            <h2>订单配置（POST /orders）</h2>
-            <p className="subtext">可以直接修改 JSON，或使用默认的 demo 订单。</p>
+        <div className="layout">
+          <div className="panel">
+            <h2>订单 JSON</h2>
+            <p className="subtext">可编辑后提交，将作为当前订单缓存</p>
             <textarea
               className="code-input"
               value={orderJson}
               onChange={(e) => setOrderJson(e.target.value)}
+              spellCheck={false}
             />
-            <button className="primary-btn" onClick={handleSubmitOrder} disabled={orderLoading}>
-              {orderLoading ? '提交中…' : '提交订单并设为当前订单'}
+            <button
+              type="button"
+              className="primary-btn"
+              onClick={handleSubmitOrder}
+              disabled={orderLoading}
+            >
+              {orderLoading ? '提交中…' : '提交订单'}
             </button>
-            <h3>响应结果</h3>
-            <pre className="code-output">
-              {orderResult || '// 点击上面的按钮后，这里会显示 /orders 的响应'}
-            </pre>
-          </section>
-        </main>
+          </div>
+          <div className="panel">
+            <h2>响应</h2>
+            <pre className="code-output">{orderResult || '—'}</pre>
+          </div>
+        </div>
       )}
 
       {activeTab === 'wood' && (
-        <main className="layout single">
-          <section className="panel">
-            <h2>展开平面图 & 切割结果</h2>
-            <div className="row">
-              <label>
-                选择样例木材：
-                <select
-                  value={selectedWoodId}
-                  onChange={(e) => setSelectedWoodId(e.target.value)}
-                >
-                  {demoWoods.map((w) => (
-                    <option key={w.woodId} value={w.woodId}>
-                      {w.woodId}（L={w.length}, W={w.width}, H={w.height}）
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button className="primary-btn" onClick={handleSubmitWood} disabled={woodLoading}>
-                {woodLoading ? '请求中…' : '提交木材到 /woods'}
+        <>
+          <div className="layout">
+            <div className="panel">
+              <h2>选择木材</h2>
+              <div className="row">
+                <label>
+                  木材:
+                  <select
+                    value={selectedWoodId}
+                    onChange={(e) => setSelectedWoodId(e.target.value)}
+                  >
+                    {demoWoods.map((w) => (
+                      <option key={w.woodId} value={w.woodId}>
+                        {w.woodId} (长 {w.length} mm)
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={handleSubmitWood}
+                disabled={woodLoading}
+              >
+                {woodLoading ? '计算中…' : '提交并计算切割方案'}
               </button>
             </div>
-            <UnfoldedView wood={selectedWood} response={woodResponse} />
-          </section>
-
-          <section className="panel">
-            <h2>请求体 & 响应结果（POST /woods）</h2>
-            <h3>请求体（wood）</h3>
-            <pre className="code-output small">
-              {selectedWood ? pretty({ wood: selectedWood }) : '// 未选择木材'}
-            </pre>
-            <h3>响应结果（cuttingPlan & flattened_defects）</h3>
-            <pre className="code-output">
-              {woodResultText || '// 点击“提交木材”后，这里会显示 /woods 的响应'}
-            </pre>
-          </section>
-        </main>
+            <div className="panel">
+              <h2>响应</h2>
+              <pre className="code-output">{woodResultText || '—'}</pre>
+            </div>
+          </div>
+          {woodResponse && woodLength > 0 && (
+            <div className="panel" style={{ marginTop: 16 }}>
+              <h2>展开平面图与切割结果</h2>
+              <div className="metrics">
+                <span className="metric-item">木材: {woodLength} × {woodWidth} × {woodHeight} mm，展开 Y 高: {planeHeight} mm</span>
+                {plan && (
+                  <>
+                    <span className="metric-highlight">
+                      已用: {(plan.totalUsedLength ?? plan.total_used_length ?? 0).toFixed(0)} mm，段数: {plan.pieces?.length ?? 0}
+                    </span>
+                    {(plan.totalKerfMm ?? plan.total_kerf_mm) != null && (
+                      <span className="metric-item">锯缝: {plan.totalKerfMm ?? plan.total_kerf_mm} mm</span>
+                    )}
+                  </>
+                )}
+                <span className="metric-item">缺陷数: {flattenedDefects.length}</span>
+              </div>
+              <svg
+                className="unfolded-svg"
+                viewBox={`0 0 ${woodLength} ${planeHeight}`}
+                preserveAspectRatio="xMidYMid meet"
+              >
+                {/* 展开面背景：上/右/下/左 */}
+                <rect x={0} y={0} width={woodLength} height={woodWidth} fill="#fef3c7" stroke="#d1d5db" strokeWidth="0.5" />
+                <rect x={0} y={woodWidth} width={woodLength} height={woodHeight} fill="#dbeafe" stroke="#d1d5db" strokeWidth="0.5" />
+                <rect x={0} y={woodWidth + woodHeight} width={woodLength} height={woodWidth} fill="#fef3c7" stroke="#d1d5db" strokeWidth="0.5" />
+                <rect x={0} y={2 * woodWidth + woodHeight} width={woodLength} height={woodHeight} fill="#dbeafe" stroke="#d1d5db" strokeWidth="0.5" />
+                {/* 缺陷（展开平面坐标 bbox_on_plane / bboxOnPlane） */}
+                {flattenedDefects.map((d, i) => {
+                  const b = d.bbox_on_plane ?? d.bboxOnPlane ?? [];
+                  if (b.length < 4) return null;
+                  return (
+                    <rect
+                      key={i}
+                      x={b[0]}
+                      y={b[1]}
+                      width={b[2]}
+                      height={b[3]}
+                      fill="rgba(185, 28, 28, 0.5)"
+                      stroke="#b91c1c"
+                      strokeWidth="1"
+                    />
+                  );
+                })}
+                {/* 切割段（半透明色块，沿整条 Y 方向） */}
+                {plan?.pieces?.map((p, i) => (
+                  <rect
+                    key={`seg-${i}`}
+                    x={p.begin}
+                    y={0}
+                    width={p.length}
+                    height={planeHeight}
+                    fill={`hsla(${200 + (i % 4) * 40}, 70%, 85%, 0.35)`}
+                    stroke="none"
+                  />
+                ))}
+                {/* 切割线（粗线，沿整条 Y 方向） */}
+                {plan?.pieces?.map((p, i) => (
+                  <line
+                    key={`cut-${i}`}
+                    x1={p.begin + p.length}
+                    y1={0}
+                    x2={p.begin + p.length}
+                    y2={planeHeight}
+                    stroke="#dc2626"
+                    strokeWidth={Math.max(2, 4)}
+                  />
+                ))}
+                {plan?.pieces?.length > 0 && (
+                  <line
+                    x1={plan.pieces[0].begin}
+                    y1={0}
+                    x2={plan.pieces[0].begin}
+                    y2={planeHeight}
+                    stroke="#dc2626"
+                    strokeWidth={Math.max(2, 4)}
+                  />
+                )}
+              </svg>
+              <div className="legend">
+                <span className="legend-item">
+                  <span className="legend-color" style={{ background: '#fef3c7' }} />
+                  上/下面
+                </span>
+                <span className="legend-item">
+                  <span className="legend-color" style={{ background: '#dbeafe' }} />
+                  左/右面
+                </span>
+                <span className="legend-item">
+                  <span className="legend-color" style={{ background: 'rgba(185,28,28,0.5)' }} />
+                  缺陷
+                </span>
+                <span className="legend-item">
+                  <span className="legend-color" style={{ background: 'hsla(200,70%,85%,0.5)' }} />
+                  切割段
+                </span>
+                <span className="legend-item">
+                  <span className="legend-color" style={{ background: '#dc2626' }} />
+                  切割线
+                </span>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 }
-
-function UnfoldedView({ wood, response }) {
-  if (!wood) {
-    return <p className="subtext">请先在左侧选择一根木材。</p>;
-  }
-
-  if (!response || !response.flattened_defects) {
-    return <p className="subtext">提交木材后，这里会显示展开平面图和切割结果。</p>;
-  }
-
-  const defects = response.flattened_defects || [];
-  const pieces = response.cutting_plan?.pieces || [];
-
-  const plan = response.cutting_plan || {};
-  const totalUsed =
-    typeof plan.totalUsedLength === 'number'
-      ? plan.totalUsedLength
-      : pieces.reduce((s, p) => s + (p.length || 0), 0);
-  const woodLength = wood.length || 0;
-  const waste =
-    typeof plan.wasteLength === 'number'
-      ? plan.wasteLength
-      : woodLength > 0
-        ? Math.max(0, woodLength - totalUsed)
-        : 0;
-  const utilization = woodLength > 0 ? (totalUsed / woodLength) * 100 : 0;
-  const wasteRate = woodLength > 0 ? (waste / woodLength) * 100 : 0;
-
-  // 使用与后端 PlaneLayout 一致的展开高度比例：
-  // top:    [0, width)
-  // right:  [width, width + height)
-  // bottom: [width + height, 2*width + height)
-  // left:   [2*width + height, 2*width + 2*height)
-  const width = wood.width || 0;
-  const height = wood.height || 0;
-  const planeHeight = 2 * width + 2 * height;
-
-  const productIds = Array.from(new Set(pieces.map((p) => p.productId)));
-  const palette = ['#bfdbfe', '#bbf7d0', '#fed7aa', '#fecaca', '#e9d5ff'];
-  const productColor = (id) => {
-    const idx = productIds.indexOf(id);
-    return palette[idx >= 0 ? idx % palette.length : 0];
-  };
-
-  return (
-    <div>
-      <div className="metrics">
-        <span className="metric-item">原材料长度：{wood.length} mm</span>
-        <span className="metric-item">
-          截面：{wood.width} × {wood.height} mm
-        </span>
-        <span className="metric-item">已利用：{totalUsed.toFixed(1)} mm</span>
-        <span className="metric-item metric-highlight">
-          废料率：{wasteRate.toFixed(1)}%
-        </span>
-      </div>
-      <p className="subtext">
-        展开图纵向比例与截面尺寸一致：上/下为宽度段，右/左为高度段；不同颜色为不同产品切割段，深色小块为缺陷。
-      </p>
-      <svg
-        className="unfolded-svg"
-        viewBox={`0 0 ${woodLength} ${planeHeight}`}
-        preserveAspectRatio="none"
-      >
-        {/* 整体背景 */}
-        <rect
-          x="0"
-          y="0"
-          width={woodLength}
-          height={planeHeight}
-          fill="#fefce8"
-          stroke="#d4d4d4"
-          strokeWidth="0.5"
-        />
-
-        {/* 水平分割线，对应四个面边界（加粗一点更清晰） */}
-        {[width, width + height, width + height + width].map((y, idx) => (
-          <line
-            key={`hline-${idx}`}
-            x1="0"
-            y1={y}
-            x2={woodLength}
-            y2={y}
-            stroke="#e5e7eb"
-            strokeWidth="1.5"
-          />
-        ))}
-
-        {/* 切割段：纵向覆盖整个展开高度 */}
-        {pieces.map((p, idx) => (
-          <rect
-            key={`piece-${idx}`}
-            x={p.begin}
-            y={0}
-            width={p.length}
-            height={planeHeight}
-            fill={productColor(p.productId)}
-            fillOpacity="0.25"
-            stroke="#6b7280"
-            strokeWidth="0.5"
-          />
-        ))}
-
-        {/* 缺陷：使用后端提供的 bboxOnPlane，自动按比例落在对应面上 */}
-        {defects.map((d, idx) => {
-          const [x, y, w, h] = d.bboxOnPlane;
-          return (
-            <rect
-              key={`defect-${idx}`}
-              x={x}
-              y={y}
-              width={w}
-              height={h}
-              fill="#111827"
-              fillOpacity="0.85"
-            />
-          );
-        })}
-      </svg>
-
-      {productIds.length > 0 && (
-        <div className="legend">
-          {productIds.map((id) => (
-            <span key={id} className="legend-item">
-              <span
-                className="legend-color"
-                style={{ backgroundColor: productColor(id) }}
-              />
-              产品 {id}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-
