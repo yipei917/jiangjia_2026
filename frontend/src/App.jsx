@@ -101,19 +101,6 @@ export default function App() {
       } catch {
         // ignore
       }
-      const planData = data?.cutting_plan;
-      const list = planData?.satisfiedProducts ?? planData?.satisfied_products ?? [];
-      if (list.length > 0) {
-        setCumulativeProduced((prev) => {
-          const next = { ...prev };
-          for (const sp of list) {
-            const id = sp.productId ?? sp.product_id;
-            const add = sp.producedQty ?? sp.produced_qty ?? 0;
-            next[id] = (next[id] ?? 0) + add;
-          }
-          return next;
-        });
-      }
     } catch (e) {
       const msg =
         e?.message?.includes('fetch') || e?.name === 'TypeError'
@@ -131,6 +118,63 @@ export default function App() {
   const flattenedDefects =
     woodResponse?.flattened_defects ?? woodResponse?.flattenedDefects ?? [];
   const defectsForDiagram = woodResponse ? flattenedDefects : previewDefects;
+
+  // 缺陷颜色映射与图例（不同缺陷类型不同颜色）
+  const defectColorMap = useMemo(() => {
+    const palette = [
+      '#ef4444', // red
+      '#f97316', // orange
+      '#eab308', // yellow
+      '#22c55e', // green
+      '#3b82f6', // blue
+      '#a855f7', // purple
+    ];
+    const map = {};
+    defectsForDiagram.forEach((d) => {
+      const name =
+        d.defect_class ?? d.class ?? d.defectName ?? d.name ?? '缺陷';
+      if (!map[name]) {
+        const idx = Object.keys(map).length;
+        map[name] = palette[idx % palette.length];
+      }
+    });
+    return map;
+  }, [defectsForDiagram]);
+
+  const defectLegend = Object.entries(defectColorMap).map(
+    ([name, color]) => ({ name, color }),
+  );
+
+  // 产品颜色映射与图例（不同产品不同颜色，用于切割段）
+  const productColorMap = useMemo(() => {
+    // 半透明颜色，保证切割段不会完全遮挡缺陷
+    const palette = [
+      'hsla(142, 70%, 60%, 0.35)', // green
+      'hsla(217, 70%, 65%, 0.35)', // blue
+      'hsla(270, 70%, 70%, 0.35)', // purple
+      'hsla(24,  90%, 65%, 0.35)', // orange
+      'hsla(50,  90%, 60%, 0.35)', // yellow
+      'hsla(190, 80%, 60%, 0.35)', // cyan
+    ];
+    const map = {};
+    const products = orderSummary?.products ?? [];
+    products.forEach((p, idx) => {
+      if (!map[p.id]) {
+        map[p.id] = palette[idx % palette.length];
+      }
+    });
+    // 若尚未加载订单或产品表为空，则从切割段中推导
+    if (!products.length && plan?.pieces) {
+      plan.pieces.forEach((p) => {
+        const pid = p.productId ?? p.product_id;
+        if (pid && !map[pid]) {
+          const idx = Object.keys(map).length;
+          map[pid] = palette[idx % palette.length];
+        }
+      });
+    }
+    return map;
+  }, [orderSummary, plan]);
   const woodLength = selectedWood?.length ?? 0;
   const woodWidth = selectedWood?.width ?? 100;
   const woodHeight = selectedWood?.height ?? 50;
@@ -300,6 +344,9 @@ export default function App() {
                 <rect x={0} y={2 * woodWidth + woodHeight} width={woodLength} height={woodHeight} fill="#dbeafe" stroke="#d1d5db" strokeWidth="0.5" />
                 {/* 缺陷：预览用 previewDefects，提交后用接口返回的 flattened_defects */}
                 {defectsForDiagram.map((d, i) => {
+                  const name =
+                    d.defect_class ?? d.class ?? d.defectName ?? d.name ?? '缺陷';
+                  const color = defectColorMap[name] ?? '#ef4444';
                   const b = d.bbox_on_plane ?? d.bboxOnPlane ?? [];
                   if (b.length < 4) return null;
                   return (
@@ -309,71 +356,42 @@ export default function App() {
                       y={b[1]}
                       width={b[2]}
                       height={b[3]}
-                      fill="rgba(185, 28, 28, 0.5)"
-                      stroke="#b91c1c"
+                      fill={color}
+                      stroke={color}
                       strokeWidth="1"
                     />
                   );
                 })}
-                {/* 提交后才有：切割段、切割线 */}
-                {woodResponse && (
-                  <>
-                    {plan?.pieces?.map((p, i) => (
-                      <rect
-                        key={`seg-${i}`}
-                        x={p.begin}
-                        y={0}
-                        width={p.length}
-                        height={planeHeight}
-                        fill={`hsla(${200 + (i % 4) * 40}, 70%, 85%, 0.35)`}
-                        stroke="none"
-                      />
-                    ))}
-                    {plan?.pieces?.map((p, i) => (
-                      <line
-                        key={`cut-${i}`}
-                        x1={p.begin + p.length}
-                        y1={0}
-                        x2={p.begin + p.length}
-                        y2={planeHeight}
-                        stroke="#dc2626"
-                        strokeWidth={Math.max(2, 4)}
-                      />
-                    ))}
-                    {plan?.pieces?.length > 0 && (
-                      <line
-                        x1={plan.pieces[0].begin}
-                        y1={0}
-                        x2={plan.pieces[0].begin}
-                        y2={planeHeight}
-                        stroke="#dc2626"
-                        strokeWidth={Math.max(2, 4)}
-                      />
-                    )}
-                  </>
-                )}
+                {/* 切割段：按产品着色，不再单独渲染锯缝/切割线 */}
+                {woodResponse && plan?.pieces?.map((p, i) => {
+                  const pid = p.productId ?? p.product_id;
+                  const color = productColorMap[pid] ?? `hsla(${200 + (i % 4) * 40}, 70%, 85%, 0.35)`;
+                  return (
+                  <rect
+                    key={`seg-${i}`}
+                    x={p.begin}
+                    y={0}
+                    width={p.length}
+                    height={planeHeight}
+                    fill={color}
+                    stroke="none"
+                  />
+                  );
+                })}
               </svg>
               <div className="legend">
-                <span className="legend-item">
-                  <span className="legend-color" style={{ background: '#fef3c7' }} />
-                  上/下面
-                </span>
-                <span className="legend-item">
-                  <span className="legend-color" style={{ background: '#dbeafe' }} />
-                  左/右面
-                </span>
-                <span className="legend-item">
-                  <span className="legend-color" style={{ background: 'rgba(185,28,28,0.5)' }} />
-                  缺陷
-                </span>
-                <span className="legend-item">
-                  <span className="legend-color" style={{ background: 'hsla(200,70%,85%,0.5)' }} />
-                  切割段
-                </span>
-                <span className="legend-item">
-                  <span className="legend-color" style={{ background: '#dc2626' }} />
-                  切割线
-                </span>
+                {defectLegend.map((d) => (
+                  <span className="legend-item" key={d.name}>
+                    <span className="legend-color" style={{ background: d.color }} />
+                    {d.name}
+                  </span>
+                ))}
+                {Object.entries(productColorMap).map(([id, color]) => (
+                  <span className="legend-item" key={id}>
+                    <span className="legend-color" style={{ background: color }} />
+                    产品 {id}
+                  </span>
+                ))}
               </div>
             </div>
           )}
