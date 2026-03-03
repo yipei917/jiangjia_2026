@@ -69,3 +69,5 @@ def get_current_order() -> Order:
             detail="当前尚未加载任何订单，请先调用 POST /orders。",
         )
     return current
+
+

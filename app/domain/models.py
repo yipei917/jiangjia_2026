@@ -61,6 +61,8 @@ class Product(BaseModel):
     ref_height: float = Field(alias="refHeight", gt=0)
     ref_width: float = Field(alias="refWidth", gt=0)
     qty: int = Field(ge=1)
+    # 累计已完成数量，由后端根据 CuttingPlan 持续更新；下单时默认为 0
+    produced_qty: int = Field(alias="producedQty", default=0, ge=0)
     value: Annotated[float, Field(ge=0.0, le=1.0)]
     sections: list[Section] = Field(default_factory=list)
 

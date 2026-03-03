@@ -99,9 +99,13 @@ def process_wood(body: ProcessWoodRequest) -> ProcessWoodResponse:
     # 2. 缺陷平面映射
     flattened = flatten_defects(wood)
 
-    # 3. 优化引擎（v1 贪心版，仅按 product.value 进行裁切，不考虑缺陷）
+    # 3. 优化引擎：根据当前订单与展开缺陷生成切割方案
     cutting_plan: Optional[CuttingPlan] = optimize(wood, order, flattened)
     optimization_status = "completed"
+
+    if cutting_plan is not None:
+        # 4. 将本次产量累加到订单完成情况中
+        order_service.register_production(cutting_plan)
 
     elapsed_ms = (time.perf_counter() - t0) * 1000
     logger.info(

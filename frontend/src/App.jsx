@@ -12,6 +12,7 @@ export default function App() {
 
   const [orderJson, setOrderJson] = useState(pretty(demoOrderJson));
   const [orderResult, setOrderResult] = useState('');
+  const [orderSummary, setOrderSummary] = useState(null);
   const [orderLoading, setOrderLoading] = useState(false);
 
   const [selectedWoodId, setSelectedWoodId] = useState(demoWoods[0]?.woodId ?? '');
@@ -25,7 +26,7 @@ export default function App() {
   const [previewDefects, setPreviewDefects] = useState([]);
   const [previewLoading, setPreviewLoading] = useState(false);
 
-  // 切换木材时清空上一根的结果，并拉取当前木材的展开缺陷（用于未切割时的展开图）
+  // 切换木材时只清空当前木材的切割结果与预览缺陷，并拉取新木材的展开缺陷（订单与累计完成不清空）
   useEffect(() => {
     setWoodResponse(null);
     setWoodError('');
@@ -64,6 +65,12 @@ export default function App() {
       });
       const data = await res.json();
       setOrderResult(pretty(data));
+      try {
+        const current = await fetch(`${API_BASE}/orders/current`).then((r) => r.json());
+        setOrderSummary(current);
+      } catch {
+        // ignore
+      }
     } catch (e) {
       const msg =
         e?.message?.includes('fetch') || e?.name === 'TypeError'
@@ -88,6 +95,25 @@ export default function App() {
       });
       const data = await res.json();
       setWoodResponse(data);
+      try {
+        const current = await fetch(`${API_BASE}/orders/current`).then((r) => r.json());
+        setOrderSummary(current);
+      } catch {
+        // ignore
+      }
+      const planData = data?.cutting_plan;
+      const list = planData?.satisfiedProducts ?? planData?.satisfied_products ?? [];
+      if (list.length > 0) {
+        setCumulativeProduced((prev) => {
+          const next = { ...prev };
+          for (const sp of list) {
+            const id = sp.productId ?? sp.product_id;
+            const add = sp.producedQty ?? sp.produced_qty ?? 0;
+            next[id] = (next[id] ?? 0) + add;
+          }
+          return next;
+        });
+      }
     } catch (e) {
       const msg =
         e?.message?.includes('fetch') || e?.name === 'TypeError'
@@ -224,16 +250,18 @@ export default function App() {
             </div>
             <div className="panel">
               <h2>订单完成情况</h2>
-              {!plan && <p className="subtext">暂无切割结果，完成情况将在切割后显示。</p>}
-              {plan && (
+              {!orderSummary && (
+                <p className="subtext">尚未加载订单，请先在上方“订单配置”提交。</p>
+              )}
+              {orderSummary && (
                 <div style={{ fontSize: 13 }}>
-                  {satisfiedProducts.map((sp) => {
-                    const produced = sp.producedQty ?? sp.produced_qty ?? 0;
-                    const required = sp.requiredQty ?? sp.required_qty ?? 0;
+                  {orderSummary.products?.map((p) => {
+                    const produced = p.producedQty ?? p.produced_qty ?? 0;
+                    const required = p.qty ?? 0;
                     const remaining = Math.max(0, required - produced);
                     return (
-                      <div key={sp.productId ?? sp.product_id} style={{ marginBottom: 4 }}>
-                        产品 {sp.productId ?? sp.product_id}: 已完成 {produced} / {required}，剩余 {remaining}
+                      <div key={p.id} style={{ marginBottom: 4 }}>
+                        产品 {p.id}: 已完成 {produced} / {required}，剩余 {remaining}
                       </div>
                     );
                   })}
