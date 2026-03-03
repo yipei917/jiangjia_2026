@@ -46,9 +46,30 @@ class ProcessWoodResponse(BaseModel):
     elapsed_ms: float
 
 
+class PreviewWoodRequest(BaseModel):
+    wood: Wood
+
+
+class PreviewWoodResponse(BaseModel):
+    """仅展开缺陷，不跑优化。用于切割前预览展开图与缺陷。"""
+    wood_id: str
+    flattened_defects: list[FlattenedDefect]
+
+
 # ---------------------------------------------------------------------------
 # 路由
 # ---------------------------------------------------------------------------
+
+@router.post(
+    "/preview",
+    response_model=PreviewWoodResponse,
+    summary="仅展开缺陷到平面（不计算切割方案）",
+)
+def preview_wood(body: PreviewWoodRequest) -> PreviewWoodResponse:
+    """用于切割前预览：将四面缺陷映射到统一展开平面，不校验订单、不调用优化。"""
+    wood = body.wood
+    flattened = flatten_defects(wood)
+    return PreviewWoodResponse(wood_id=wood.wood_id, flattened_defects=flattened)
 
 @router.post(
     "",
