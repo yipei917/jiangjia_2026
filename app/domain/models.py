@@ -74,6 +74,8 @@ class Order(BaseModel):
 
     order_id: str = Field(alias="orderId")
     products: list[Product]
+    # 锯片厚度（mm），每刀损耗，随订单传入；未传时视为 0
+    saw_kerf_mm: float = Field(alias="sawKerfMm", default=0.0, ge=0)
 
 
 # ---------------------------------------------------------------------------
@@ -160,6 +162,8 @@ class CuttingPlan(BaseModel):
     total_value: float = Field(alias="totalValue", default=0.0)
     total_used_length: float = Field(alias="totalUsedLength", default=0.0)
     waste_length: float = Field(alias="wasteLength", default=0.0)
+    # 锯缝总损耗（mm），等于 刀数 × 订单 sawKerfMm
+    total_kerf_mm: float = Field(alias="totalKerfMm", default=0.0)
     satisfied_products: list[SatisfiedProduct] = Field(
         alias="satisfiedProducts", default_factory=list
     )

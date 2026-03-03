@@ -24,7 +24,6 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-
 def _effective_min_length(product: "Product", wood_length: float) -> float:
     """
     计算产品在当前木材上的“有效最小长度”。
@@ -81,8 +80,16 @@ def optimize(
         },
     )
 
+    # 锯片厚度（mm）由订单传入，每切一刀损耗该长度
+    saw_kerf = float(getattr(order, "saw_kerf_mm", 0.0) or 0.0)
+
     while cur_x < wood_length:
         remaining_length = wood_length - cur_x
+
+        # 剩余长度需至少能放下一个最小段长 + 本段后的锯缝
+        if remaining_length <= saw_kerf:
+            break
+        available_for_piece = remaining_length - saw_kerf
 
         # 为当前起点 cur_x 选一个“最优产品”
         best_product = None
@@ -96,12 +103,11 @@ def optimize(
             min_len = _effective_min_length(product, wood_length)
             max_len = _effective_max_length(product, wood_length)
 
-            if remaining_length < min_len:
-                # 剩余长度不足以再生产该产品
+            if available_for_piece < min_len:
                 continue
 
-            # 在当前剩余长度内，尽量使用最大允许长度
-            candidate_length = min(max_len, remaining_length)
+            # 段长不超过可用长度（已扣除锯缝与预留）
+            candidate_length = min(max_len, available_for_piece)
             if candidate_length < min_len:
                 continue
 
@@ -143,7 +149,7 @@ def optimize(
         pieces.append(piece)
 
         remaining_qty[best_product.id] -= 1
-        cur_x += best_length
+        cur_x += best_length + saw_kerf
 
         logger.debug(
             "选择切段",
@@ -167,6 +173,9 @@ def optimize(
 
     total_used_length = sum(p.length for p in pieces)
     total_value = sum(p.value for p in pieces)
+    # 锯缝只作“段间间隔”，不单独占位；锯缝导致的损耗统一算入废料
+    # 废料 = 木材总长 - 产品总长（含段间锯缝+尾部未用）
+    total_kerf_mm = cur_x - total_used_length  # 段间锯缝总长，便于统计
     waste_length = max(0.0, wood_length - total_used_length)
 
     produced_counter = Counter(p.product_id for p in pieces)
@@ -187,6 +196,7 @@ def optimize(
         totalValue=total_value,
         totalUsedLength=total_used_length,
         wasteLength=waste_length,
+        totalKerfMm=total_kerf_mm,
         satisfiedProducts=satisfied_products,
     )
 
@@ -195,8 +205,8 @@ def optimize(
         extra={
             "wood_id": wood.wood_id,
             "piece_count": len(pieces),
-            "total_value": total_value,
             "total_used_length": total_used_length,
+            "total_kerf_mm": total_kerf_mm,
             "waste_length": waste_length,
         },
     )

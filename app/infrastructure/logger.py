@@ -24,7 +24,7 @@ def _init_root_logger() -> None:
     root = logging.getLogger()
     if not root.handlers:
         root.addHandler(handler)
-    root.setLevel(logging.DEBUG)
+    root.setLevel(logging.INFO)
     _initialized = True
 
 

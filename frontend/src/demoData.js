@@ -1,7 +1,6 @@
-// 从后端 demo/order_demo.json 和 demo/wood_demo.json 中拷贝的示例数据。
-
 export const demoOrderJson = {
   orderId: 'ORDER-DEMO-MULTI-001',
+  sawKerfMm: 4,
   products: [
     {
       id: 'P1',
@@ -122,18 +121,24 @@ export const demoWoods = [
     height: 50,
     defectDetails: {
       top: [
-        {
-          class: 'Knot',
-          bbox: [10, 300, 15, 100]
-        },
-        {
-          class: 'Knot',
-          bbox: [60, 1200, 20, 25]
-        }
+        { class: 'Knot', bbox: [10, 300, 15, 20] },
+        { class: 'Knot', bbox: [60, 1200, 20, 25] },
+        { class: 'Knot', bbox: [30, 600, 18, 35] },
+        { class: 'Knot', bbox: [70, 1700, 12, 40] }
       ],
-      right: [],
-      bottom: [],
-      left: []
+      right: [
+        { class: 'Knot', bbox: [5, 400, 10, 30] },
+        { class: 'Knot', bbox: [25, 950, 15, 25] }
+      ],
+      bottom: [
+        { class: 'Knot', bbox: [20, 150, 25, 30] },
+        { class: 'Knot', bbox: [55, 800, 18, 45] },
+        { class: 'Knot', bbox: [10, 1400, 20, 35] }
+      ],
+      left: [
+        { class: 'Knot', bbox: [10, 550, 12, 28] },
+        { class: 'Knot', bbox: [30, 1300, 14, 22] }
+      ]
     }
   },
   {
@@ -143,22 +148,24 @@ export const demoWoods = [
     height: 50,
     defectDetails: {
       top: [
-        {
-          class: 'Knot',
-          bbox: [8, 250, 12, 30]
-        },
-        {
-          class: 'Knot',
-          bbox: [55, 900, 18, 25]
-        },
-        {
-          class: 'Knot',
-          bbox: [40, 1400, 20, 35]
-        }
+        { class: 'Knot', bbox: [8, 250, 12, 30] },
+        { class: 'Knot', bbox: [55, 900, 18, 25] },
+        { class: 'Knot', bbox: [40, 1400, 20, 35] },
+        { class: 'Knot', bbox: [20, 500, 15, 40] }
       ],
-      right: [],
-      bottom: [],
-      left: []
+      right: [
+        { class: 'Knot', bbox: [8, 200, 12, 35] },
+        { class: 'Knot', bbox: [35, 1100, 10, 28] }
+      ],
+      bottom: [
+        { class: 'Knot', bbox: [15, 350, 22, 30] },
+        { class: 'Knot', bbox: [60, 750, 18, 38] }
+      ],
+      left: [
+        { class: 'Knot', bbox: [5, 600, 15, 25] },
+        { class: 'Knot', bbox: [28, 1200, 12, 32] },
+        { class: 'Knot', bbox: [40, 300, 8, 20] }
+      ]
     }
   },
   {
@@ -168,26 +175,26 @@ export const demoWoods = [
     height: 50,
     defectDetails: {
       top: [
-        {
-          class: 'Knot',
-          bbox: [5, 300, 10, 30]
-        },
-        {
-          class: 'Knot',
-          bbox: [45, 1100, 20, 40]
-        },
-        {
-          class: 'Knot',
-          bbox: [70, 1800, 15, 50]
-        },
-        {
-          class: 'Knot',
-          bbox: [20, 600, 18, 35]
-        }
+        { class: 'Knot', bbox: [5, 300, 10, 30] },
+        { class: 'Knot', bbox: [45, 1100, 20, 40] },
+        { class: 'Knot', bbox: [70, 1800, 15, 50] },
+        { class: 'Knot', bbox: [20, 600, 18, 35] },
+        { class: 'Knot', bbox: [50, 200, 15, 25] }
       ],
-      right: [],
-      bottom: [],
-      left: []
+      right: [
+        { class: 'Knot', bbox: [10, 500, 12, 30] },
+        { class: 'Knot', bbox: [30, 1500, 18, 40] },
+        { class: 'Knot', bbox: [5, 900, 14, 22] }
+      ],
+      bottom: [
+        { class: 'Knot', bbox: [25, 100, 20, 35] },
+        { class: 'Knot', bbox: [60, 700, 22, 45] },
+        { class: 'Knot', bbox: [15, 1600, 18, 38] }
+      ],
+      left: [
+        { class: 'Knot', bbox: [12, 400, 16, 28] },
+        { class: 'Knot', bbox: [38, 1200, 10, 35] }
+      ]
     }
   },
   {
@@ -197,18 +204,23 @@ export const demoWoods = [
     height: 50,
     defectDetails: {
       top: [
-        {
-          class: 'Knot',
-          bbox: [15, 200, 15, 40]
-        },
-        {
-          class: 'Knot',
-          bbox: [65, 800, 25, 30]
-        }
+        { class: 'Knot', bbox: [15, 200, 15, 40] },
+        { class: 'Knot', bbox: [65, 800, 25, 30] },
+        { class: 'Knot', bbox: [40, 1200, 18, 35] }
       ],
-      right: [],
-      bottom: [],
-      left: []
+      right: [
+        { class: 'Knot', bbox: [8, 350, 12, 28] },
+        { class: 'Knot', bbox: [35, 950, 15, 32] }
+      ],
+      bottom: [
+        { class: 'Knot', bbox: [20, 100, 20, 40] },
+        { class: 'Knot', bbox: [55, 600, 18, 30] },
+        { class: 'Knot', bbox: [10, 1100, 22, 38] }
+      ],
+      left: [
+        { class: 'Knot', bbox: [10, 450, 14, 25] },
+        { class: 'Knot', bbox: [42, 750, 12, 28] }
+      ]
     }
   }
 ];

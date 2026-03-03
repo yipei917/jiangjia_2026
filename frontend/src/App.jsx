@@ -111,7 +111,7 @@ export default function App() {
       {activeTab === 'wood' && (
         <main className="layout single">
           <section className="panel">
-            <h2>选择木材并请求切割方案（POST /woods）</h2>
+            <h2>展开平面图 & 切割结果</h2>
             <div className="row">
               <label>
                 选择样例木材：
@@ -130,20 +130,19 @@ export default function App() {
                 {woodLoading ? '请求中…' : '提交木材到 /woods'}
               </button>
             </div>
+            <UnfoldedView wood={selectedWood} response={woodResponse} />
+          </section>
 
+          <section className="panel">
+            <h2>请求体 & 响应结果（POST /woods）</h2>
             <h3>请求体（wood）</h3>
             <pre className="code-output small">
               {selectedWood ? pretty({ wood: selectedWood }) : '// 未选择木材'}
             </pre>
-
             <h3>响应结果（cuttingPlan & flattened_defects）</h3>
             <pre className="code-output">
               {woodResultText || '// 点击“提交木材”后，这里会显示 /woods 的响应'}
             </pre>
-          </section>
-
-          <section className="panel">
-            <UnfoldedView wood={selectedWood} response={woodResponse} />
           </section>
         </main>
       )}
@@ -196,7 +195,6 @@ function UnfoldedView({ wood, response }) {
 
   return (
     <div>
-      <h2>展开平面图 & 切割结果</h2>
       <div className="metrics">
         <span className="metric-item">原材料长度：{wood.length} mm</span>
         <span className="metric-item">
