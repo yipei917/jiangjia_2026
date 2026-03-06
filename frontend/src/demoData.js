@@ -128,7 +128,7 @@ export const demoWoods = [
       ],
       right: [
         { class: 'Knot', bbox: [5, 400, 10, 30] },
-        { class: 'Knot', bbox: [25, 950, 15, 25] }
+        { class: 'Knot', bbox: [25, 850, 15, 25] }
       ],
       bottom: [
         { class: 'Knot', bbox: [20, 150, 25, 30] },
@@ -143,7 +143,7 @@ export const demoWoods = [
   },
   {
     woodId: 'WOOD-DEMO-EX-01',
-    length: 1800,
+    length: 1900,
     width: 100,
     height: 50,
     defectDetails: {
@@ -158,6 +158,7 @@ export const demoWoods = [
         { class: 'Knot', bbox: [35, 1100, 10, 28] }
       ],
       bottom: [
+        { class: 'Knot', bbox: [25, 150, 15, 25] },
         { class: 'Knot', bbox: [15, 350, 22, 30] },
         { class: 'Knot', bbox: [60, 750, 18, 38] }
       ],
@@ -175,20 +176,17 @@ export const demoWoods = [
     height: 50,
     defectDetails: {
       top: [
-        { class: 'Knot', bbox: [5, 300, 10, 30] },
         { class: 'Knot', bbox: [45, 1100, 20, 40] },
-        { class: 'Knot', bbox: [70, 1800, 15, 50] },
+        { class: 'Knot', bbox: [70, 2050, 15, 50] },
         { class: 'Knot', bbox: [20, 600, 18, 35] },
         { class: 'Knot', bbox: [50, 200, 15, 25] }
       ],
       right: [
         { class: 'Knot', bbox: [10, 500, 12, 30] },
-        { class: 'Knot', bbox: [30, 1500, 18, 40] },
         { class: 'Knot', bbox: [5, 900, 14, 22] }
       ],
       bottom: [
         { class: 'Knot', bbox: [25, 100, 20, 35] },
-        { class: 'Knot', bbox: [60, 700, 22, 45] },
         { class: 'Knot', bbox: [15, 1600, 18, 38] }
       ],
       left: [
@@ -198,29 +196,39 @@ export const demoWoods = [
     }
   },
   {
-    woodId: 'WOOD-DEMO-EX-03',
-    length: 1600,
+    woodId: 'WOOD-2000-LOW',
+    length: 2000,
     width: 100,
     height: 50,
     defectDetails: {
-      top: [
-        { class: 'Knot', bbox: [15, 200, 15, 40] },
-        { class: 'Knot', bbox: [65, 800, 25, 30] },
-        { class: 'Knot', bbox: [40, 1200, 18, 35] }
-      ],
-      right: [
-        { class: 'Knot', bbox: [8, 350, 12, 28] },
-        { class: 'Knot', bbox: [35, 950, 15, 32] }
-      ],
-      bottom: [
-        { class: 'Knot', bbox: [20, 100, 20, 40] },
-        { class: 'Knot', bbox: [55, 600, 18, 30] },
-        { class: 'Knot', bbox: [10, 1100, 22, 38] }
-      ],
-      left: [
-        { class: 'Knot', bbox: [10, 450, 14, 25] },
-        { class: 'Knot', bbox: [42, 750, 12, 28] }
-      ]
+      top: [{ class: 'Knot', bbox: [30, 800, 15, 25] }],
+      right: [{ class: 'Knot', bbox: [10, 400, 12, 20] }],
+      bottom: [],
+      left: [{ class: 'Knot', bbox: [15, 1200, 10, 22] }]
+    }
+  },
+  {
+    woodId: 'WOOD-2200-LOW',
+    length: 2200,
+    width: 100,
+    height: 50,
+    defectDetails: {
+      top: [{ class: 'Knot', bbox: [40, 600, 18, 30] }],
+      right: [],
+      bottom: [{ class: 'Knot', bbox: [20, 1100, 14, 28] }],
+      left: []
+    }
+  },
+  {
+    woodId: 'WOOD-1800-LOW',
+    length: 1800,
+    width: 100,
+    height: 50,
+    defectDetails: {
+      top: [{ class: 'Knot', bbox: [25, 500, 12, 28] }],
+      right: [{ class: 'Knot', bbox: [8, 900, 10, 25] }],
+      bottom: [],
+      left: []
     }
   }
 ];

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { demoOrderJson, demoWoods } from './demoData';
 
 const API_BASE = 'http://127.0.0.1:8765';
@@ -11,7 +11,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('order');
 
   const [orderJson, setOrderJson] = useState(pretty(demoOrderJson));
-  const [orderResult, setOrderResult] = useState('');
+  const [orderId, setOrderId] = useState('');
+  const [orderProducts, setOrderProducts] = useState([]); // { id, requiredQty, completedQty }
+  const [orderError, setOrderError] = useState('');
   const [orderLoading, setOrderLoading] = useState(false);
 
   const [selectedWoodId, setSelectedWoodId] = useState(demoWoods[0]?.woodId ?? '');
@@ -19,13 +21,52 @@ export default function App() {
     () => demoWoods.find((w) => w.woodId === selectedWoodId) ?? demoWoods[0],
     [selectedWoodId],
   );
-  const [woodResultText, setWoodResultText] = useState('');
-  const [woodResponse, setWoodResponse] = useState(null);
+  const [previewResponse, setPreviewResponse] = useState(null); // 当前木材展开图（切割前）
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [woodResponse, setWoodResponse] = useState(null); // 切割结果，仅当 wood_id 与当前选中一致时叠加显示
   const [woodLoading, setWoodLoading] = useState(false);
+
+  // 切换木材时拉取预览展开图（不切割）
+  useEffect(() => {
+    if (!selectedWoodId || !selectedWood) return;
+    let cancelled = false;
+    setPreviewLoading(true);
+    setPreviewResponse(null);
+    setWoodResponse(null); // 换木材后清空切割结果
+    fetch(`${API_BASE}/woods/preview`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wood: selectedWood }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setPreviewResponse(data);
+      })
+      .catch(() => {
+        if (!cancelled) setPreviewResponse(null);
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedWoodId]);
+
+  const woodIndex = useMemo(
+    () => demoWoods.findIndex((w) => w.woodId === selectedWoodId),
+    [selectedWoodId],
+  );
+  const hasPrevWood = woodIndex > 0;
+  const hasNextWood = woodIndex >= 0 && woodIndex < demoWoods.length - 1;
+  function goPrevWood() {
+    if (hasPrevWood) setSelectedWoodId(demoWoods[woodIndex - 1].woodId);
+  }
+  function goNextWood() {
+    if (hasNextWood) setSelectedWoodId(demoWoods[woodIndex + 1].woodId);
+  }
 
   async function handleSubmitOrder() {
     setOrderLoading(true);
-    setOrderResult('');
+    setOrderError('');
     try {
       const body = JSON.parse(orderJson);
       const res = await fetch(`${API_BASE}/orders`, {
@@ -34,13 +75,18 @@ export default function App() {
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      setOrderResult(pretty(data));
+      setOrderId(body.orderId ?? data.order_id ?? '');
+      setOrderProducts((body.products ?? []).map((p) => ({
+        id: p.id,
+        requiredQty: p.qty ?? 0,
+        completedQty: 0,
+      })));
     } catch (e) {
       const msg =
         e?.message?.includes('fetch') || e?.name === 'TypeError'
           ? `请求失败（请确认后端已启动：在项目根目录运行 python main.py，监听 8765 端口）\n${String(e)}`
           : String(e);
-      setOrderResult(`错误: ${msg}`);
+      setOrderError(msg);
     } finally {
       setOrderLoading(false);
     }
@@ -48,7 +94,6 @@ export default function App() {
 
   async function handleSubmitWood() {
     setWoodLoading(true);
-    setWoodResultText('');
     setWoodResponse(null);
     try {
       const body = { wood: selectedWood };
@@ -58,14 +103,28 @@ export default function App() {
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      setWoodResultText(pretty(data));
       setWoodResponse(data);
+      // 切割后更新订单产品已完成数量
+      const satisfied = data?.cutting_plan?.satisfied_products ?? data?.cutting_plan?.satisfiedProducts ?? [];
+      if (satisfied.length > 0) {
+        setOrderProducts((prev) => {
+          const next = prev.map((p) => ({ ...p }));
+          for (const sp of satisfied) {
+            const pid = sp.product_id ?? sp.productId;
+            const qty = sp.produced_qty ?? sp.producedQty ?? 0;
+            const item = next.find((n) => n.id === pid);
+            if (item) item.completedQty += qty;
+          }
+          return next;
+        });
+      }
     } catch (e) {
       const msg =
         e?.message?.includes('fetch') || e?.name === 'TypeError'
           ? `请求失败（请确认后端已启动：在项目根目录运行 python main.py，监听 8765 端口）\n${String(e)}`
           : String(e);
-      setWoodResultText(`错误: ${msg}`);
+      setWoodResponse(null);
+      // 错误时仍可保留上次结果，仅不更新
     } finally {
       setWoodLoading(false);
     }
@@ -124,8 +183,34 @@ export default function App() {
             </button>
           </div>
           <div className="panel">
-            <h2>响应</h2>
-            <pre className="code-output">{orderResult || '—'}</pre>
+            <h2>订单信息</h2>
+            {orderError && <p className="subtext" style={{ color: '#b91c1c' }}>{orderError}</p>}
+            {!orderId && orderProducts.length === 0 && !orderError && (
+              <p className="subtext">提交订单后显示订单号与产品需求/已完成数量（初始为 0，切割后更新）</p>
+            )}
+            {orderId && (
+              <>
+                <p className="subtext">订单号：{orderId}</p>
+                <table className="order-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #d1d5db' }}>
+                      <th style={{ textAlign: 'left', padding: '6px 8px' }}>产品 ID</th>
+                      <th style={{ textAlign: 'right', padding: '6px 8px' }}>需求数量</th>
+                      <th style={{ textAlign: 'right', padding: '6px 8px' }}>已完成数量</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orderProducts.map((p) => (
+                      <tr key={p.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                        <td style={{ padding: '6px 8px' }}>{p.id}</td>
+                        <td style={{ textAlign: 'right', padding: '6px 8px' }}>{p.requiredQty}</td>
+                        <td style={{ textAlign: 'right', padding: '6px 8px' }}>{p.completedQty}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -135,8 +220,16 @@ export default function App() {
           <div className="layout">
             <div className="panel">
               <h2>选择木材</h2>
-              <div className="row">
-                <label>
+              <div className="row" style={{ alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="primary-btn"
+                  onClick={goPrevWood}
+                  disabled={!hasPrevWood}
+                >
+                  上一根
+                </button>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   木材:
                   <select
                     value={selectedWoodId}
@@ -149,124 +242,155 @@ export default function App() {
                     ))}
                   </select>
                 </label>
+                <button
+                  type="button"
+                  className="primary-btn"
+                  onClick={goNextWood}
+                  disabled={!hasNextWood}
+                >
+                  下一根
+                </button>
               </div>
               <button
                 type="button"
                 className="primary-btn"
                 onClick={handleSubmitWood}
-                disabled={woodLoading}
+                disabled={woodLoading || !orderId}
+                style={{ marginTop: 8 }}
               >
                 {woodLoading ? '计算中…' : '提交并计算切割方案'}
               </button>
             </div>
             <div className="panel">
-              <h2>响应</h2>
-              <pre className="code-output">{woodResultText || '—'}</pre>
+              <h2>订单信息</h2>
+              {!orderId && orderProducts.length === 0 && (
+                <p className="subtext">请先在「订单配置」提交订单</p>
+              )}
+              {orderId && (
+                <>
+                  <p className="subtext">订单号：{orderId}</p>
+                  <table className="order-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #d1d5db' }}>
+                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>产品 ID</th>
+                        <th style={{ textAlign: 'right', padding: '6px 8px' }}>需求数量</th>
+                        <th style={{ textAlign: 'right', padding: '6px 8px' }}>已完成数量</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orderProducts.map((p) => (
+                        <tr key={p.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                          <td style={{ padding: '6px 8px' }}>{p.id}</td>
+                          <td style={{ textAlign: 'right', padding: '6px 8px' }}>{p.requiredQty}</td>
+                          <td style={{ textAlign: 'right', padding: '6px 8px' }}>{p.completedQty}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
             </div>
           </div>
-          {woodResponse && woodLength > 0 && (
+          {(previewLoading && !previewResponse) && (
             <div className="panel" style={{ marginTop: 16 }}>
-              <h2>展开平面图与切割结果</h2>
-              <div className="metrics">
-                <span className="metric-item">木材: {woodLength} × {woodWidth} × {woodHeight} mm，展开 Y 高: {planeHeight} mm</span>
-                {plan && (
-                  <>
-                    <span className="metric-highlight">
-                      已用: {(plan.totalUsedLength ?? plan.total_used_length ?? 0).toFixed(0)} mm，段数: {plan.pieces?.length ?? 0}
-                    </span>
-                    {(plan.totalKerfMm ?? plan.total_kerf_mm) != null && (
-                      <span className="metric-item">锯缝: {plan.totalKerfMm ?? plan.total_kerf_mm} mm</span>
-                    )}
-                  </>
-                )}
-                <span className="metric-item">缺陷数: {flattenedDefects.length}</span>
-              </div>
-              <svg
-                className="unfolded-svg"
-                viewBox={`0 0 ${woodLength} ${planeHeight}`}
-                preserveAspectRatio="xMidYMid meet"
-              >
-                {/* 展开面背景：上/右/下/左 */}
-                <rect x={0} y={0} width={woodLength} height={woodWidth} fill="#fef3c7" stroke="#d1d5db" strokeWidth="0.5" />
-                <rect x={0} y={woodWidth} width={woodLength} height={woodHeight} fill="#dbeafe" stroke="#d1d5db" strokeWidth="0.5" />
-                <rect x={0} y={woodWidth + woodHeight} width={woodLength} height={woodWidth} fill="#fef3c7" stroke="#d1d5db" strokeWidth="0.5" />
-                <rect x={0} y={2 * woodWidth + woodHeight} width={woodLength} height={woodHeight} fill="#dbeafe" stroke="#d1d5db" strokeWidth="0.5" />
-                {/* 缺陷（展开平面坐标 bbox_on_plane / bboxOnPlane） */}
-                {flattenedDefects.map((d, i) => {
-                  const b = d.bbox_on_plane ?? d.bboxOnPlane ?? [];
-                  if (b.length < 4) return null;
-                  return (
-                    <rect
-                      key={i}
-                      x={b[0]}
-                      y={b[1]}
-                      width={b[2]}
-                      height={b[3]}
-                      fill="rgba(185, 28, 28, 0.5)"
-                      stroke="#b91c1c"
-                      strokeWidth="1"
-                    />
-                  );
-                })}
-                {/* 切割段（半透明色块，沿整条 Y 方向） */}
-                {plan?.pieces?.map((p, i) => (
-                  <rect
-                    key={`seg-${i}`}
-                    x={p.begin}
-                    y={0}
-                    width={p.length}
-                    height={planeHeight}
-                    fill={`hsla(${200 + (i % 4) * 40}, 70%, 85%, 0.35)`}
-                    stroke="none"
-                  />
-                ))}
-                {/* 切割线（粗线，沿整条 Y 方向） */}
-                {plan?.pieces?.map((p, i) => (
-                  <line
-                    key={`cut-${i}`}
-                    x1={p.begin + p.length}
-                    y1={0}
-                    x2={p.begin + p.length}
-                    y2={planeHeight}
-                    stroke="#dc2626"
-                    strokeWidth={Math.max(2, 4)}
-                  />
-                ))}
-                {plan?.pieces?.length > 0 && (
-                  <line
-                    x1={plan.pieces[0].begin}
-                    y1={0}
-                    x2={plan.pieces[0].begin}
-                    y2={planeHeight}
-                    stroke="#dc2626"
-                    strokeWidth={Math.max(2, 4)}
-                  />
-                )}
-              </svg>
-              <div className="legend">
-                <span className="legend-item">
-                  <span className="legend-color" style={{ background: '#fef3c7' }} />
-                  上/下面
-                </span>
-                <span className="legend-item">
-                  <span className="legend-color" style={{ background: '#dbeafe' }} />
-                  左/右面
-                </span>
-                <span className="legend-item">
-                  <span className="legend-color" style={{ background: 'rgba(185,28,28,0.5)' }} />
-                  缺陷
-                </span>
-                <span className="legend-item">
-                  <span className="legend-color" style={{ background: 'hsla(200,70%,85%,0.5)' }} />
-                  切割段
-                </span>
-                <span className="legend-item">
-                  <span className="legend-color" style={{ background: '#dc2626' }} />
-                  切割线
-                </span>
-              </div>
+              <p className="subtext">加载展开图…</p>
             </div>
           )}
+          {((previewResponse && previewResponse.wood_id === selectedWoodId) || (woodResponse && woodResponse.wood_id === selectedWoodId)) && (() => {
+            const base = previewResponse?.wood_id === selectedWoodId
+              ? previewResponse
+              : woodResponse;
+            const len = base?.length ?? woodLength;
+            const w = base?.width ?? woodWidth;
+            const h = base?.height ?? woodHeight;
+            const ph = 2 * w + 2 * h;
+            const defects = base?.flattened_defects ?? base?.flattenedDefects ?? [];
+            const plan = woodResponse?.wood_id === selectedWoodId ? (woodResponse?.cutting_plan ?? woodResponse?.cuttingPlan) : null;
+            const defectClasses = [...new Set(defects.map((d) => d.defect_class ?? d.class ?? '缺陷'))];
+            const defectColors = ['rgba(185,28,28,0.55)', 'rgba(194,65,12,0.55)', 'rgba(120,53,15,0.55)', 'rgba(124,58,237,0.55)', 'rgba(20,83,45,0.55)'];
+            const productIds = plan ? [...new Map(plan.pieces?.map((p) => [p.product_id ?? p.productId, true]) ?? []).keys()] : [];
+            const productColor = (pid) => {
+              const idx = productIds.indexOf(pid);
+              return idx < 0 ? 'hsla(200,70%,85%,0.35)' : `hsla(${200 + (idx % 4) * 40}, 70%, 85%, 0.35)`;
+            };
+            const defectColor = (cls) => defectColors[defectClasses.indexOf(cls) % defectColors.length];
+            if (!len || !ph) return null;
+            return (
+              <div key={base?.wood_id} className="panel" style={{ marginTop: 16 }}>
+                <h2>展开平面图与切割结果</h2>
+                {previewLoading && <p className="subtext">加载展开图…</p>}
+                <div className="metrics">
+                  <span className="metric-item">木材: {len} × {w} × {h} mm，展开 Y 高: {ph} mm</span>
+                  {plan && (
+                    <>
+                      <span className="metric-highlight">
+                        已用: {(plan.totalUsedLength ?? plan.total_used_length ?? 0).toFixed(0)} mm，段数: {plan.pieces?.length ?? 0}
+                      </span>
+                      {(plan.totalKerfMm ?? plan.total_kerf_mm) != null && (
+                        <span className="metric-item">锯缝: {plan.totalKerfMm ?? plan.total_kerf_mm} mm</span>
+                      )}
+                    </>
+                  )}
+                  <span className="metric-item">缺陷数: {defects.length}</span>
+                </div>
+                <svg
+                  className="unfolded-svg"
+                  viewBox={`0 0 ${len} ${ph}`}
+                  preserveAspectRatio="xMidYMid meet"
+                >
+                  {/* 展开面背景：上/右/下/左 */}
+                  <rect x={0} y={0} width={len} height={w} fill="#fef3c7" stroke="#d1d5db" strokeWidth="0.5" />
+                  <rect x={0} y={w} width={len} height={h} fill="#dbeafe" stroke="#d1d5db" strokeWidth="0.5" />
+                  <rect x={0} y={w + h} width={len} height={w} fill="#fef3c7" stroke="#d1d5db" strokeWidth="0.5" />
+                  <rect x={0} y={2 * w + h} width={len} height={h} fill="#dbeafe" stroke="#d1d5db" strokeWidth="0.5" />
+                  {/* 缺陷（按缺陷类型着色） */}
+                  {defects.map((d, i) => {
+                    const b = d.bbox_on_plane ?? d.bboxOnPlane ?? [];
+                    if (b.length < 4) return null;
+                    const cls = d.defect_class ?? d.class ?? '缺陷';
+                    return (
+                      <rect
+                        key={i}
+                        x={b[0]}
+                        y={b[1]}
+                        width={b[2]}
+                        height={b[3]}
+                        fill={defectColor(cls)}
+                        stroke="#374151"
+                        strokeWidth="1"
+                      />
+                    );
+                  })}
+                  {/* 切割后叠加：按产品着色 */}
+                  {plan?.pieces?.map((p, i) => (
+                    <rect
+                      key={`seg-${i}`}
+                      x={p.begin}
+                      y={0}
+                      width={p.length}
+                      height={ph}
+                      fill={productColor(p.product_id ?? p.productId)}
+                      stroke="none"
+                    />
+                  ))}
+                </svg>
+                <div className="legend">
+                  {defectClasses.map((cls) => (
+                    <span key={cls} className="legend-item">
+                      <span className="legend-color" style={{ background: defectColor(cls) }} />
+                      {cls}
+                    </span>
+                  ))}
+                  {productIds.map((pid) => (
+                    <span key={pid} className="legend-item">
+                      <span className="legend-color" style={{ background: productColor(pid) }} />
+                      产品 {pid}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </>
       )}
     </div>
