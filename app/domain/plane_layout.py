@@ -9,22 +9,11 @@
     bottom: [wood.width + wood.height, 2*wood.width + wood.height)
     left:   [2*wood.width + wood.height, 2*wood.width + 2*wood.height)
 
-输入坐标系（原始“竖向”像素坐标）：
-  - 当 Wood 提供 imgwidth、imgheight 时，DefectInstance.bbox 为相对于图片的像素坐标 [x_px, y_px, w_px, h_px]：
-      * 图片横轴（imgwidth）沿木材“宽”方向；
-      * 图片纵轴（imgheight）沿木材“长”方向。
-    此时 bbox 表示的是“竖向坐标”：x=宽、y=长。
-    我们需要先将其转换为“横向木材坐标”：[x_len, y_width, w_len, h_width]：
-      * x_len / w_len：沿木材长度方向；
-      * y_width / h_width：沿木材宽度方向。
-    仅对 top、bottom 面做像素→物理转换；侧面暂不处理。
-  - 当未提供 imgwidth/imgheight 时，bbox 直接视为已经是横向木材物理坐标 [x_len, y_width, w_len, h_width]。
-
-像素到横向木材物理坐标（仅 top/bottom 且提供了图片尺寸时）：
-  x_len   = y_px * wood.length / imgheight   （图片纵轴 → 木材长度）
-  y_width = x_px * wood.width  / imgwidth    （图片横轴 → 木材宽度）
-  w_len   = h_px * wood.length / imgheight
-  h_width = w_px * wood.width  / imgwidth
+输入坐标系与转换流程（仅 top/bottom 且提供 imgwidth 时）：
+  1. 先将缺陷从竖向转换成横向（像素层面：长度/宽度轴向与 bbox 的对应关系由约定确定）。
+  2. 计算比例：ratio = length / imgwidth。
+  3. 将横向的缺陷坐标（四个数）乘以该比例，得到物理坐标 [x_len, y_width, w_len, h_width]。
+  - 当未提供 imgwidth 或 face 非 top/bottom 时，bbox 直接视为已是横向木材物理坐标。
 
 转换到统一展开平面坐标系的规则（横向木材坐标）：
   x_plane = x_len              （沿木材长度方向）
@@ -61,35 +50,30 @@ def _image_bbox_to_physical(
     wood: Wood,
 ) -> list[float]:
     """
-    将“竖向”像素坐标转换为“横向木材坐标”。
+    按约定三步转换：竖向 → 横向（像素）→ 乘以比例 length/imgwidth 得到物理坐标。
 
-    约定：
-      - 原始 bbox = [x_px, y_px, w_px, h_px] 为图片像素：
-          x_px / w_px：沿图片横轴（对应木材宽）；
-          y_px / h_px：沿图片纵轴（对应木材长）。
-      - 转换结果为横向木材物理坐标 [x_len, y_width, w_len, h_width]：
-          x_len / w_len：沿木材长度方向（横向 X 轴）；
-          y_width / h_width：沿木材宽度方向（纵向 Y 轴）。
-
-    仅当 face 为 top/bottom 且 wood 提供了 imgwidth/imgheight 时进行像素→物理转换；
-    其余情况视为已经是横向木材坐标，直接返回数值。
+    仅当 face 为 top/bottom 且 wood 提供 imgwidth 时做转换；否则视为已是横向物理坐标。
     """
     img_w = getattr(wood, "imgwidth", None)
-    img_h = getattr(wood, "imgheight", None)
-    if face not in ("top", "bottom") or not img_w or not img_h or img_w <= 0 or img_h <= 0:
+    if face not in ("top", "bottom") or not img_w or img_w <= 0:
         return [float(x) for x in bbox]
     x_px, y_px, w_px, h_px = (float(b) for b in bbox)
-    # 将像素限制在图片范围内，避免越界导致换算后超出木材
-    y_px = max(0.0, min(y_px, img_h - 1e-6))
-    h_px = max(0.0, min(h_px, img_h - y_px))
-    x_px = max(0.0, min(x_px, img_w - 1e-6))
-    w_px = max(0.0, min(w_px, img_w - x_px))
-    # 将“竖向像素坐标”转换为“横向木材物理坐标”
-    # 图片纵轴(img_h) → 木材长度；图片横轴(img_w) → 木材宽度
-    x_len = y_px * wood.length / img_h
-    y_width = x_px * wood.width / img_w
-    w_len = h_px * wood.length / img_h
-    h_width = w_px * wood.width / img_w
+
+    # 1. 竖向转横向：约定竖向为 图纵轴=长度、图横轴=宽度；横向为 (长度, 宽度)
+    #    故 长度方向 = 原纵轴(y)，宽度方向 = 原横轴(x)
+    x_len_px = y_px
+    y_width_px = x_px
+    w_len_px = h_px
+    h_width_px = w_px
+
+    # 2. 比例 = length / imgwidth
+    ratio = float(wood.length) / img_w
+
+    # 3. 横向缺陷坐标乘以该比例
+    x_len = x_len_px * ratio
+    y_width = y_width_px * ratio
+    w_len = w_len_px * ratio
+    h_width = h_width_px * ratio
     return [x_len, y_width, w_len, h_width]
 
 
