@@ -41,6 +41,11 @@ export default function App() {
     })
       .then((res) => res.json())
       .then((data) => {
+        console.log('[POST /woods/preview] 返回:', data);
+        if (data?.flattened_defects || data?.flattenedDefects) {
+          const list = data.flattened_defects ?? data.flattenedDefects;
+          console.log('[POST /woods/preview] 缺陷数:', list?.length, '首条 bbox:', list?.[0]);
+        }
         if (!cancelled && data?.flattened_defects) setPreviewDefects(data.flattened_defects);
         else if (!cancelled && data?.flattenedDefects) setPreviewDefects(data.flattenedDefects);
       })
@@ -349,13 +354,26 @@ export default function App() {
                   const color = defectColorMap[name] ?? '#ef4444';
                   const b = d.bbox_on_plane ?? d.bboxOnPlane ?? [];
                   if (b.length < 4) return null;
+                  const xRaw = Number(b[0]);
+                  const yRaw = Number(b[1]);
+                  const wRaw = Number(b[2]);
+                  const hRaw = Number(b[3]);
+                  if (!Number.isFinite(xRaw) || !Number.isFinite(yRaw) || !Number.isFinite(wRaw) || !Number.isFinite(hRaw)) {
+                    return null;
+                  }
+                  // 将缺陷裁剪到 [0, woodLength] 区间，保证 width >= 0
+                  const x = Math.max(0, Math.min(woodLength, xRaw));
+                  const maxWidth = Math.max(0, woodLength - x);
+                  const w = Math.max(0, Math.min(wRaw, maxWidth));
+                  const h = Math.max(hRaw, 1.5); // 最小显示高度，避免太细看不见
+                  if (w <= 0) return null;
                   return (
                     <rect
                       key={i}
-                      x={b[0]}
-                      y={b[1]}
-                      width={b[2]}
-                      height={b[3]}
+                      x={x}
+                      y={yRaw}
+                      width={w}
+                      height={h}
                       fill={color}
                       stroke={color}
                       strokeWidth="1"
