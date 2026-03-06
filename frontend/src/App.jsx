@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { demoOrderJson, demoWoods } from './demoData';
+import { demoOrderJson, demoWoods, defectnames } from './demoData';
 
 const API_BASE = 'http://127.0.0.1:8765';
 
@@ -127,24 +127,18 @@ export default function App() {
   // 缺陷颜色映射与图例（不同缺陷类型不同颜色）
   const defectColorMap = useMemo(() => {
     const palette = [
-      '#ef4444', // red
-      '#f97316', // orange
-      '#eab308', // yellow
-      '#22c55e', // green
-      '#3b82f6', // blue
-      '#a855f7', // purple
+      '#ef4444', // red - crack
+      '#f97316', // orange - resin
+      '#eab308', // yellow - black knot
+      '#22c55e', // green - wormhole
+      '#3b82f6', '#a855f7',
     ];
     const map = {};
-    defectsForDiagram.forEach((d) => {
-      const name =
-        d.defect_class ?? d.class ?? d.defectName ?? d.name ?? '缺陷';
-      if (!map[name]) {
-        const idx = Object.keys(map).length;
-        map[name] = palette[idx % palette.length];
-      }
+    defectnames.forEach((name, idx) => {
+      map[name] = palette[idx % palette.length];
     });
     return map;
-  }, [defectsForDiagram]);
+  }, []);
 
   const defectLegend = Object.entries(defectColorMap).map(
     ([name, color]) => ({ name, color }),
@@ -175,6 +169,24 @@ export default function App() {
         if (pid && !map[pid]) {
           const idx = Object.keys(map).length;
           map[pid] = palette[idx % palette.length];
+        }
+      });
+    }
+    return map;
+  }, [orderSummary, plan]);
+  const productLineColorMap = useMemo(() => {
+    const linePalette = ['hsl(142, 70%, 38%)', 'hsl(217, 70%, 45%)', 'hsl(270, 70%, 48%)', 'hsl(24, 90%, 48%)', 'hsl(50, 90%, 45%)', 'hsl(190, 80%, 42%)'];
+    const map = {};
+    const products = orderSummary?.products ?? [];
+    products.forEach((p, idx) => {
+      if (!map[p.id]) map[p.id] = linePalette[idx % linePalette.length];
+    });
+    if (!products.length && plan?.pieces) {
+      plan.pieces.forEach((p) => {
+        const pid = p.productId ?? p.product_id;
+        if (pid && !map[pid]) {
+          const idx = Object.keys(map).length;
+          map[pid] = linePalette[idx % linePalette.length];
         }
       });
     }
@@ -380,20 +392,31 @@ export default function App() {
                     />
                   );
                 })}
-                {/* 切割段：按产品着色，不再单独渲染锯缝/切割线 */}
+                {/* 切割段：按产品着色 */}
                 {woodResponse && plan?.pieces?.map((p, i) => {
                   const pid = p.productId ?? p.product_id;
                   const color = productColorMap[pid] ?? `hsla(${200 + (i % 4) * 40}, 70%, 85%, 0.35)`;
                   return (
-                  <rect
-                    key={`seg-${i}`}
-                    x={p.begin}
-                    y={0}
-                    width={p.length}
-                    height={planeHeight}
-                    fill={color}
-                    stroke="none"
-                  />
+                    <g key={`seg-${i}`}>
+                      <rect
+                        x={p.begin}
+                        y={0}
+                        width={p.length}
+                        height={planeHeight}
+                        fill={color}
+                        stroke="none"
+                      />
+                      {/* 底部分段线：凸显该段范围 */}
+                      <line
+                        x1={p.begin + 4}
+                        y1={planeHeight}
+                        x2={p.begin + p.length - 4}
+                        y2={planeHeight}
+                        stroke={productLineColorMap[pid] ?? '#374151'}
+                        strokeWidth={6}
+                        strokeLinecap="round"
+                      />
+                    </g>
                   );
                 })}
               </svg>

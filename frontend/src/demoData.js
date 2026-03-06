@@ -113,6 +113,13 @@ export const demoOrderJson = {
   ]
 };
 
+export const defectnames = [
+  "crack",
+  "resin",
+  "black knot",
+  "wormhole"
+];
+
 export const demoWoods = [
   {
     "woodId": "WOOD-DEMO-001",
