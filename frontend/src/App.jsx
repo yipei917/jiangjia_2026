@@ -308,10 +308,18 @@ export default function App() {
             const plan = woodResponse?.wood_id === selectedWoodId ? (woodResponse?.cutting_plan ?? woodResponse?.cuttingPlan) : null;
             const defectClasses = [...new Set(defects.map((d) => d.defect_class ?? d.class ?? '缺陷'))];
             const defectColors = ['rgba(185,28,28,0.55)', 'rgba(194,65,12,0.55)', 'rgba(120,53,15,0.55)', 'rgba(124,58,237,0.55)', 'rgba(20,83,45,0.55)'];
-            const productIds = plan ? [...new Map(plan.pieces?.map((p) => [p.product_id ?? p.productId, true]) ?? []).keys()] : [];
+            const vividProductFills = ['hsla(0, 95%, 58%, 0.5)', 'hsla(38, 100%, 52%, 0.5)', 'hsla(145, 70%, 42%, 0.55)', 'hsla(260, 90%, 58%, 0.5)', 'hsla(300, 85%, 55%, 0.5)'];
+            const vividProductLines = ['hsl(0, 95%, 48%)', 'hsl(38, 100%, 45%)', 'hsl(145, 70%, 35%)', 'hsl(260, 90%, 48%)', 'hsl(300, 85%, 45%)'];
+            const productIds = orderProducts.length > 0
+              ? orderProducts.map((p) => p.id)
+              : (plan ? [...new Map(plan.pieces?.map((p) => [p.product_id ?? p.productId, true]) ?? []).keys()] : []);
             const productColor = (pid) => {
               const idx = productIds.indexOf(pid);
-              return idx < 0 ? 'hsla(200,70%,85%,0.35)' : `hsla(${200 + (idx % 4) * 40}, 70%, 85%, 0.35)`;
+              return idx < 0 ? vividProductFills[0] : vividProductFills[idx % vividProductFills.length];
+            };
+            const productLineColor = (pid) => {
+              const idx = productIds.indexOf(pid);
+              return idx < 0 ? vividProductLines[0] : vividProductLines[idx % vividProductLines.length];
             };
             const defectColor = (cls) => defectColors[defectClasses.indexOf(cls) % defectColors.length];
             if (!len || !ph) return null;
@@ -363,15 +371,26 @@ export default function App() {
                   })}
                   {/* 切割后叠加：按产品着色 */}
                   {plan?.pieces?.map((p, i) => (
-                    <rect
-                      key={`seg-${i}`}
-                      x={p.begin}
-                      y={0}
-                      width={p.length}
-                      height={ph}
-                      fill={productColor(p.product_id ?? p.productId)}
-                      stroke="none"
-                    />
+                    <g key={`seg-${i}`}>
+                      <rect
+                        x={p.begin}
+                        y={0}
+                        width={p.length}
+                        height={ph}
+                        fill={productColor(p.product_id ?? p.productId)}
+                        stroke="none"
+                      />
+                      {/* 底部线条凸显该段范围，按产品颜色区分，两端略缩短避免相连 */}
+                      <line
+                        x1={p.begin + 4}
+                        y1={ph}
+                        x2={p.begin + p.length - 4}
+                        y2={ph}
+                        stroke={productLineColor(p.product_id ?? p.productId)}
+                        strokeWidth={6}
+                        strokeLinecap="round"
+                      />
+                    </g>
                   ))}
                 </svg>
                 <div className="legend">
@@ -381,10 +400,10 @@ export default function App() {
                       {cls}
                     </span>
                   ))}
-                  {productIds.map((pid) => (
-                    <span key={pid} className="legend-item">
-                      <span className="legend-color" style={{ background: productColor(pid) }} />
-                      产品 {pid}
+                  {orderProducts.length > 0 && orderProducts.map((p) => (
+                    <span key={p.id} className="legend-item">
+                      <span className="legend-color" style={{ background: productColor(p.id) }} />
+                      产品 {p.id}
                     </span>
                   ))}
                 </div>
