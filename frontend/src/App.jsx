@@ -243,8 +243,60 @@ export default function App() {
             </button>
           </div>
           <div className="panel">
-            <h2>响应</h2>
-            <pre className="code-output">{orderResult || '—'}</pre>
+            <h2>订单信息</h2>
+            {(() => {
+              const order = orderSummary || (() => {
+                try {
+                  const parsed = JSON.parse(orderJson);
+                  return parsed?.products ? { orderId: parsed.orderId ?? parsed.order_id, products: parsed.products } : null;
+                } catch {
+                  return null;
+                }
+              })();
+              if (!order?.products?.length) {
+                return <p className="subtext">请编辑并提交订单 JSON 后查看</p>;
+              }
+              const formatLength = (p) => {
+                const min = p.minLength ?? p.min_length;
+                const max = p.maxLength ?? p.max_length;
+                if (min != null && max != null && min === max) return `${min} mm`;
+                if (min != null && max != null) return `${min}–${max} mm`;
+                if (min != null) return `${min} mm`;
+                if (max != null) return `≤${max} mm`;
+                return '—';
+              };
+              return (
+                <>
+                  <p className="subtext">订单号：{order.orderId ?? order.order_id ?? '—'}</p>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8, fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #d1d5db' }}>
+                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>产品 ID</th>
+                        <th style={{ textAlign: 'right', padding: '6px 8px' }}>长度</th>
+                        <th style={{ textAlign: 'right', padding: '6px 8px' }}>需求数量</th>
+                        {orderSummary && (
+                          <th style={{ textAlign: 'right', padding: '6px 8px' }}>已完成</th>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {order.products.map((p) => (
+                        <tr key={p.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                          <td style={{ padding: '6px 8px' }}>{p.id}</td>
+                          <td style={{ textAlign: 'right', padding: '6px 8px' }}>{formatLength(p)}</td>
+                          <td style={{ textAlign: 'right', padding: '6px 8px' }}>{p.qty ?? 0}</td>
+                          {orderSummary && (
+                            <td style={{ textAlign: 'right', padding: '6px 8px' }}>
+                              {p.producedQty ?? p.produced_qty ?? 0}
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -310,23 +362,49 @@ export default function App() {
               )}
             </div>
             <div className="panel">
-              <h2>订单完成情况</h2>
-              {!orderSummary && (
+              <h2>订单信息</h2>
+              {!orderSummary?.products?.length ? (
                 <p className="subtext">尚未加载订单，请先在上方“订单配置”提交。</p>
-              )}
-              {orderSummary && (
-                <div style={{ fontSize: 13 }}>
-                  {orderSummary.products?.map((p) => {
-                    const produced = p.producedQty ?? p.produced_qty ?? 0;
-                    const required = p.qty ?? 0;
-                    const remaining = Math.max(0, required - produced);
-                    return (
-                      <div key={p.id} style={{ marginBottom: 4 }}>
-                        产品 {p.id}: 已完成 {produced} / {required}，剩余 {remaining}
-                      </div>
-                    );
-                  })}
-                </div>
+              ) : (
+                <>
+                  <p className="subtext">订单号：{orderSummary.orderId ?? orderSummary.order_id ?? '—'}</p>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8, fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #d1d5db' }}>
+                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>产品 ID</th>
+                        <th style={{ textAlign: 'right', padding: '6px 8px' }}>长度</th>
+                        <th style={{ textAlign: 'right', padding: '6px 8px' }}>需求数量</th>
+                        <th style={{ textAlign: 'right', padding: '6px 8px' }}>已完成</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orderSummary.products.map((p) => {
+                        const min = p.minLength ?? p.min_length;
+                        const max = p.maxLength ?? p.max_length;
+                        const lengthStr =
+                          min != null && max != null && min === max
+                            ? `${min} mm`
+                            : min != null && max != null
+                              ? `${min}–${max} mm`
+                              : min != null
+                                ? `${min} mm`
+                                : max != null
+                                  ? `≤${max} mm`
+                                  : '—';
+                        return (
+                          <tr key={p.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                            <td style={{ padding: '6px 8px' }}>{p.id}</td>
+                            <td style={{ textAlign: 'right', padding: '6px 8px' }}>{lengthStr}</td>
+                            <td style={{ textAlign: 'right', padding: '6px 8px' }}>{p.qty ?? 0}</td>
+                            <td style={{ textAlign: 'right', padding: '6px 8px' }}>
+                              {p.producedQty ?? p.produced_qty ?? 0}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </>
               )}
             </div>
           </div>
