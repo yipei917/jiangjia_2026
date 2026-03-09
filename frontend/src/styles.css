@@ -65,8 +65,7 @@ body {
 
 .code-input {
   width: 100%;
-  min-height: 420px;
-  height: 420px;
+  height: 220px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
   font-size: 12px;

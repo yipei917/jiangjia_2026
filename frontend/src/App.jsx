@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { demoOrderJson, demoWoods, defectnames } from './demoData';
+import React, { useMemo, useState, useEffect } from 'react';
+import { demoOrderJson, demoWoods } from './demoData';
 
 const API_BASE = 'http://127.0.0.1:8765';
 
@@ -11,8 +11,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('order');
 
   const [orderJson, setOrderJson] = useState(pretty(demoOrderJson));
-  const [orderResult, setOrderResult] = useState('');
-  const [orderSummary, setOrderSummary] = useState(null);
+  const [orderId, setOrderId] = useState('');
+  const [orderProducts, setOrderProducts] = useState([]); // { id, requiredQty, completedQty }
+  const [orderError, setOrderError] = useState('');
   const [orderLoading, setOrderLoading] = useState(false);
 
   const [selectedWoodId, setSelectedWoodId] = useState(demoWoods[0]?.woodId ?? '');
@@ -20,20 +21,18 @@ export default function App() {
     () => demoWoods.find((w) => w.woodId === selectedWoodId) ?? demoWoods[0],
     [selectedWoodId],
   );
-  const [woodResponse, setWoodResponse] = useState(null);
-  const [woodLoading, setWoodLoading] = useState(false);
-  const [woodError, setWoodError] = useState('');
-  const [previewDefects, setPreviewDefects] = useState([]);
+  const [previewResponse, setPreviewResponse] = useState(null); // 当前木材展开图（切割前）
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [woodResponse, setWoodResponse] = useState(null); // 切割结果，仅当 wood_id 与当前选中一致时叠加显示
+  const [woodLoading, setWoodLoading] = useState(false);
 
-  // 切换木材时只清空当前木材的切割结果与预览缺陷，并拉取新木材的展开缺陷（订单与累计完成不清空）
+  // 切换木材时拉取预览展开图（不切割）
   useEffect(() => {
-    setWoodResponse(null);
-    setWoodError('');
-    setPreviewDefects([]);
-    if (!selectedWood?.woodId) return;
+    if (!selectedWoodId || !selectedWood) return;
     let cancelled = false;
     setPreviewLoading(true);
+    setPreviewResponse(null);
+    setWoodResponse(null); // 换木材后清空切割结果
     fetch(`${API_BASE}/woods/preview`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -41,16 +40,10 @@ export default function App() {
     })
       .then((res) => res.json())
       .then((data) => {
-        console.log('[POST /woods/preview] 返回:', data);
-        if (data?.flattened_defects || data?.flattenedDefects) {
-          const list = data.flattened_defects ?? data.flattenedDefects;
-          console.log('[POST /woods/preview] 缺陷数:', list?.length, '首条 bbox:', list?.[0]);
-        }
-        if (!cancelled && data?.flattened_defects) setPreviewDefects(data.flattened_defects);
-        else if (!cancelled && data?.flattenedDefects) setPreviewDefects(data.flattenedDefects);
+        if (!cancelled) setPreviewResponse(data);
       })
       .catch(() => {
-        if (!cancelled) setPreviewDefects([]);
+        if (!cancelled) setPreviewResponse(null);
       })
       .finally(() => {
         if (!cancelled) setPreviewLoading(false);
@@ -58,9 +51,22 @@ export default function App() {
     return () => { cancelled = true; };
   }, [selectedWoodId]);
 
+  const woodIndex = useMemo(
+    () => demoWoods.findIndex((w) => w.woodId === selectedWoodId),
+    [selectedWoodId],
+  );
+  const hasPrevWood = woodIndex > 0;
+  const hasNextWood = woodIndex >= 0 && woodIndex < demoWoods.length - 1;
+  function goPrevWood() {
+    if (hasPrevWood) setSelectedWoodId(demoWoods[woodIndex - 1].woodId);
+  }
+  function goNextWood() {
+    if (hasNextWood) setSelectedWoodId(demoWoods[woodIndex + 1].woodId);
+  }
+
   async function handleSubmitOrder() {
     setOrderLoading(true);
-    setOrderResult('');
+    setOrderError('');
     try {
       const body = JSON.parse(orderJson);
       const res = await fetch(`${API_BASE}/orders`, {
@@ -69,19 +75,18 @@ export default function App() {
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      setOrderResult(pretty(data));
-      try {
-        const current = await fetch(`${API_BASE}/orders/current`).then((r) => r.json());
-        setOrderSummary(current);
-      } catch {
-        // ignore
-      }
+      setOrderId(body.orderId ?? data.order_id ?? '');
+      setOrderProducts((body.products ?? []).map((p) => ({
+        id: p.id,
+        requiredQty: p.qty ?? 0,
+        completedQty: 0,
+      })));
     } catch (e) {
       const msg =
         e?.message?.includes('fetch') || e?.name === 'TypeError'
           ? `请求失败（请确认后端已启动：在项目根目录运行 python main.py，监听 8765 端口）\n${String(e)}`
           : String(e);
-      setOrderResult(`错误: ${msg}`);
+      setOrderError(msg);
     } finally {
       setOrderLoading(false);
     }
@@ -89,7 +94,6 @@ export default function App() {
 
   async function handleSubmitWood() {
     setWoodLoading(true);
-    setWoodError('');
     setWoodResponse(null);
     try {
       const body = { wood: selectedWood };
@@ -100,98 +104,34 @@ export default function App() {
       });
       const data = await res.json();
       setWoodResponse(data);
-      try {
-        const current = await fetch(`${API_BASE}/orders/current`).then((r) => r.json());
-        setOrderSummary(current);
-      } catch {
-        // ignore
+      // 切割后更新订单产品已完成数量
+      const satisfied = data?.cutting_plan?.satisfied_products ?? data?.cutting_plan?.satisfiedProducts ?? [];
+      if (satisfied.length > 0) {
+        setOrderProducts((prev) => {
+          const next = prev.map((p) => ({ ...p }));
+          for (const sp of satisfied) {
+            const pid = sp.product_id ?? sp.productId;
+            const qty = sp.produced_qty ?? sp.producedQty ?? 0;
+            const item = next.find((n) => n.id === pid);
+            if (item) item.completedQty += qty;
+          }
+          return next;
+        });
       }
     } catch (e) {
       const msg =
         e?.message?.includes('fetch') || e?.name === 'TypeError'
-          ? '请求失败（请确认后端已启动：在项目根目录运行 python main.py，监听 8765 端口）'
+          ? `请求失败（请确认后端已启动：在项目根目录运行 python main.py，监听 8765 端口）\n${String(e)}`
           : String(e);
-      setWoodError(msg);
+      setWoodResponse(null);
+      // 错误时仍可保留上次结果，仅不更新
     } finally {
       setWoodLoading(false);
     }
   }
 
   const plan = woodResponse?.cutting_plan;
-  const satisfiedProducts =
-    plan?.satisfiedProducts ?? plan?.satisfied_products ?? [];
-  const flattenedDefects =
-    woodResponse?.flattened_defects ?? woodResponse?.flattenedDefects ?? [];
-  const defectsForDiagram = woodResponse ? flattenedDefects : previewDefects;
-
-  // 缺陷颜色映射与图例（不同缺陷类型不同颜色）
-  const defectColorMap = useMemo(() => {
-    const palette = [
-      '#ef4444', // red - crack
-      '#f97316', // orange - resin
-      '#eab308', // yellow - black knot
-      '#22c55e', // green - wormhole
-      '#3b82f6', '#a855f7',
-    ];
-    const map = {};
-    defectnames.forEach((name, idx) => {
-      map[name] = palette[idx % palette.length];
-    });
-    return map;
-  }, []);
-
-  const defectLegend = Object.entries(defectColorMap).map(
-    ([name, color]) => ({ name, color }),
-  );
-
-  // 产品颜色映射与图例（不同产品不同颜色，用于切割段）
-  const productColorMap = useMemo(() => {
-    // 半透明颜色，保证切割段不会完全遮挡缺陷
-    const palette = [
-      'hsla(142, 70%, 60%, 0.35)', // green
-      'hsla(217, 70%, 65%, 0.35)', // blue
-      'hsla(270, 70%, 70%, 0.35)', // purple
-      'hsla(24,  90%, 65%, 0.35)', // orange
-      'hsla(50,  90%, 60%, 0.35)', // yellow
-      'hsla(190, 80%, 60%, 0.35)', // cyan
-    ];
-    const map = {};
-    const products = orderSummary?.products ?? [];
-    products.forEach((p, idx) => {
-      if (!map[p.id]) {
-        map[p.id] = palette[idx % palette.length];
-      }
-    });
-    // 若尚未加载订单或产品表为空，则从切割段中推导
-    if (!products.length && plan?.pieces) {
-      plan.pieces.forEach((p) => {
-        const pid = p.productId ?? p.product_id;
-        if (pid && !map[pid]) {
-          const idx = Object.keys(map).length;
-          map[pid] = palette[idx % palette.length];
-        }
-      });
-    }
-    return map;
-  }, [orderSummary, plan]);
-  const productLineColorMap = useMemo(() => {
-    const linePalette = ['hsl(142, 70%, 38%)', 'hsl(217, 70%, 45%)', 'hsl(270, 70%, 48%)', 'hsl(24, 90%, 48%)', 'hsl(50, 90%, 45%)', 'hsl(190, 80%, 42%)'];
-    const map = {};
-    const products = orderSummary?.products ?? [];
-    products.forEach((p, idx) => {
-      if (!map[p.id]) map[p.id] = linePalette[idx % linePalette.length];
-    });
-    if (!products.length && plan?.pieces) {
-      plan.pieces.forEach((p) => {
-        const pid = p.productId ?? p.product_id;
-        if (pid && !map[pid]) {
-          const idx = Object.keys(map).length;
-          map[pid] = linePalette[idx % linePalette.length];
-        }
-      });
-    }
-    return map;
-  }, [orderSummary, plan]);
+  const flattenedDefects = woodResponse?.flattened_defects ?? woodResponse?.flattenedDefects ?? [];
   const woodLength = selectedWood?.length ?? 0;
   const woodWidth = selectedWood?.width ?? 100;
   const woodHeight = selectedWood?.height ?? 50;
@@ -244,59 +184,33 @@ export default function App() {
           </div>
           <div className="panel">
             <h2>订单信息</h2>
-            {(() => {
-              const order = orderSummary || (() => {
-                try {
-                  const parsed = JSON.parse(orderJson);
-                  return parsed?.products ? { orderId: parsed.orderId ?? parsed.order_id, products: parsed.products } : null;
-                } catch {
-                  return null;
-                }
-              })();
-              if (!order?.products?.length) {
-                return <p className="subtext">请编辑并提交订单 JSON 后查看</p>;
-              }
-              const formatLength = (p) => {
-                const min = p.minLength ?? p.min_length;
-                const max = p.maxLength ?? p.max_length;
-                if (min != null && max != null && min === max) return `${min} mm`;
-                if (min != null && max != null) return `${min}–${max} mm`;
-                if (min != null) return `${min} mm`;
-                if (max != null) return `≤${max} mm`;
-                return '—';
-              };
-              return (
-                <>
-                  <p className="subtext">订单号：{order.orderId ?? order.order_id ?? '—'}</p>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8, fontSize: 13 }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid #d1d5db' }}>
-                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>产品 ID</th>
-                        <th style={{ textAlign: 'right', padding: '6px 8px' }}>长度</th>
-                        <th style={{ textAlign: 'right', padding: '6px 8px' }}>需求数量</th>
-                        {orderSummary && (
-                          <th style={{ textAlign: 'right', padding: '6px 8px' }}>已完成</th>
-                        )}
+            {orderError && <p className="subtext" style={{ color: '#b91c1c' }}>{orderError}</p>}
+            {!orderId && orderProducts.length === 0 && !orderError && (
+              <p className="subtext">提交订单后显示订单号与产品需求/已完成数量（初始为 0，切割后更新）</p>
+            )}
+            {orderId && (
+              <>
+                <p className="subtext">订单号：{orderId}</p>
+                <table className="order-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #d1d5db' }}>
+                      <th style={{ textAlign: 'left', padding: '6px 8px' }}>产品 ID</th>
+                      <th style={{ textAlign: 'right', padding: '6px 8px' }}>需求数量</th>
+                      <th style={{ textAlign: 'right', padding: '6px 8px' }}>已完成数量</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orderProducts.map((p) => (
+                      <tr key={p.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                        <td style={{ padding: '6px 8px' }}>{p.id}</td>
+                        <td style={{ textAlign: 'right', padding: '6px 8px' }}>{p.requiredQty}</td>
+                        <td style={{ textAlign: 'right', padding: '6px 8px' }}>{p.completedQty}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {order.products.map((p) => (
-                        <tr key={p.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                          <td style={{ padding: '6px 8px' }}>{p.id}</td>
-                          <td style={{ textAlign: 'right', padding: '6px 8px' }}>{formatLength(p)}</td>
-                          <td style={{ textAlign: 'right', padding: '6px 8px' }}>{p.qty ?? 0}</td>
-                          {orderSummary && (
-                            <td style={{ textAlign: 'right', padding: '6px 8px' }}>
-                              {p.producedQty ?? p.produced_qty ?? 0}
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </>
-              );
-            })()}
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -306,25 +220,20 @@ export default function App() {
           <div className="layout">
             <div className="panel">
               <h2>选择木材</h2>
-              <div className="row" style={{ flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+              <div className="row" style={{ alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   className="primary-btn"
-                  style={{ background: '#6b7280' }}
-                  onClick={() => {
-                    const idx = demoWoods.findIndex((w) => w.woodId === selectedWoodId);
-                    if (idx > 0) setSelectedWoodId(demoWoods[idx - 1].woodId);
-                  }}
-                  disabled={demoWoods.findIndex((w) => w.woodId === selectedWoodId) <= 0}
+                  onClick={goPrevWood}
+                  disabled={!hasPrevWood}
                 >
                   上一根
                 </button>
-                <label style={{ margin: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   木材:
                   <select
                     value={selectedWoodId}
                     onChange={(e) => setSelectedWoodId(e.target.value)}
-                    style={{ marginLeft: 8 }}
                   >
                     {demoWoods.map((w) => (
                       <option key={w.woodId} value={w.woodId}>
@@ -336,184 +245,171 @@ export default function App() {
                 <button
                   type="button"
                   className="primary-btn"
-                  style={{ background: '#6b7280' }}
-                  onClick={() => {
-                    const idx = demoWoods.findIndex((w) => w.woodId === selectedWoodId);
-                    if (idx >= 0 && idx < demoWoods.length - 1) setSelectedWoodId(demoWoods[idx + 1].woodId);
-                  }}
-                  disabled={
-                    demoWoods.findIndex((w) => w.woodId === selectedWoodId) >= demoWoods.length - 1 ||
-                    demoWoods.findIndex((w) => w.woodId === selectedWoodId) < 0
-                  }
+                  onClick={goNextWood}
+                  disabled={!hasNextWood}
                 >
                   下一根
                 </button>
-                <button
-                  type="button"
-                  className="primary-btn"
-                  onClick={handleSubmitWood}
-                  disabled={woodLoading}
-                >
-                  {woodLoading ? '计算中…' : '提交并计算切割方案'}
-                </button>
               </div>
-              {woodError && (
-                <p style={{ marginTop: 8, color: '#dc2626', fontSize: 14 }}>{woodError}</p>
-              )}
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={handleSubmitWood}
+                disabled={woodLoading || !orderId}
+                style={{ marginTop: 8 }}
+              >
+                {woodLoading ? '计算中…' : '提交并计算切割方案'}
+              </button>
             </div>
             <div className="panel">
               <h2>订单信息</h2>
-              {!orderSummary?.products?.length ? (
-                <p className="subtext">尚未加载订单，请先在上方“订单配置”提交。</p>
-              ) : (
+              {!orderId && orderProducts.length === 0 && (
+                <p className="subtext">请先在「订单配置」提交订单</p>
+              )}
+              {orderId && (
                 <>
-                  <p className="subtext">订单号：{orderSummary.orderId ?? orderSummary.order_id ?? '—'}</p>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8, fontSize: 13 }}>
+                  <p className="subtext">订单号：{orderId}</p>
+                  <table className="order-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid #d1d5db' }}>
                         <th style={{ textAlign: 'left', padding: '6px 8px' }}>产品 ID</th>
-                        <th style={{ textAlign: 'right', padding: '6px 8px' }}>长度</th>
                         <th style={{ textAlign: 'right', padding: '6px 8px' }}>需求数量</th>
-                        <th style={{ textAlign: 'right', padding: '6px 8px' }}>已完成</th>
+                        <th style={{ textAlign: 'right', padding: '6px 8px' }}>已完成数量</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {orderSummary.products.map((p) => {
-                        const min = p.minLength ?? p.min_length;
-                        const max = p.maxLength ?? p.max_length;
-                        const lengthStr =
-                          min != null && max != null && min === max
-                            ? `${min} mm`
-                            : min != null && max != null
-                              ? `${min}–${max} mm`
-                              : min != null
-                                ? `${min} mm`
-                                : max != null
-                                  ? `≤${max} mm`
-                                  : '—';
-                        return (
-                          <tr key={p.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                            <td style={{ padding: '6px 8px' }}>{p.id}</td>
-                            <td style={{ textAlign: 'right', padding: '6px 8px' }}>{lengthStr}</td>
-                            <td style={{ textAlign: 'right', padding: '6px 8px' }}>{p.qty ?? 0}</td>
-                            <td style={{ textAlign: 'right', padding: '6px 8px' }}>
-                              {p.producedQty ?? p.produced_qty ?? 0}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      {orderProducts.map((p) => (
+                        <tr key={p.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                          <td style={{ padding: '6px 8px' }}>{p.id}</td>
+                          <td style={{ textAlign: 'right', padding: '6px 8px' }}>{p.requiredQty}</td>
+                          <td style={{ textAlign: 'right', padding: '6px 8px' }}>{p.completedQty}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </>
               )}
             </div>
           </div>
-          {woodLength > 0 && (
+          {(previewLoading && !previewResponse) && (
             <div className="panel" style={{ marginTop: 16 }}>
-              <h2>展开平面图</h2>
-              <div className="metrics">
-                <span className="metric-item">木材: {woodLength} × {woodWidth} × {woodHeight} mm，展开 Y 高: {planeHeight} mm</span>
-                <span className="metric-item">
-                  缺陷数: {previewLoading && !woodResponse ? '加载中…' : defectsForDiagram.length}
-                </span>
-                {plan && (
-                  <>
-                    <span className="metric-highlight">
-                      已用: {(plan.totalUsedLength ?? plan.total_used_length ?? 0).toFixed(0)} mm，段数: {plan.pieces?.length ?? 0}
-                    </span>
-                    {(plan.totalKerfMm ?? plan.total_kerf_mm) != null && (
-                      <span className="metric-item">锯缝: {plan.totalKerfMm ?? plan.total_kerf_mm} mm</span>
-                    )}
-                  </>
-                )}
-              </div>
-              <svg
-                className="unfolded-svg"
-                viewBox={`0 0 ${woodLength} ${planeHeight}`}
-                preserveAspectRatio="xMidYMid meet"
-              >
-                {/* 展开面背景：上/右/下/左 */}
-                <rect x={0} y={0} width={woodLength} height={woodWidth} fill="#fef3c7" stroke="#d1d5db" strokeWidth="0.5" />
-                <rect x={0} y={woodWidth} width={woodLength} height={woodHeight} fill="#dbeafe" stroke="#d1d5db" strokeWidth="0.5" />
-                <rect x={0} y={woodWidth + woodHeight} width={woodLength} height={woodWidth} fill="#fef3c7" stroke="#d1d5db" strokeWidth="0.5" />
-                <rect x={0} y={2 * woodWidth + woodHeight} width={woodLength} height={woodHeight} fill="#dbeafe" stroke="#d1d5db" strokeWidth="0.5" />
-                {/* 缺陷：预览用 previewDefects，提交后用接口返回的 flattened_defects */}
-                {defectsForDiagram.map((d, i) => {
-                  const name =
-                    d.defect_class ?? d.class ?? d.defectName ?? d.name ?? '缺陷';
-                  const color = defectColorMap[name] ?? '#ef4444';
-                  const b = d.bbox_on_plane ?? d.bboxOnPlane ?? [];
-                  if (b.length < 4) return null;
-                  const xRaw = Number(b[0]);
-                  const yRaw = Number(b[1]);
-                  const wRaw = Number(b[2]);
-                  const hRaw = Number(b[3]);
-                  if (!Number.isFinite(xRaw) || !Number.isFinite(yRaw) || !Number.isFinite(wRaw) || !Number.isFinite(hRaw)) {
-                    return null;
-                  }
-                  // 将缺陷裁剪到 [0, woodLength] 区间，保证 width >= 0
-                  const x = Math.max(0, Math.min(woodLength, xRaw));
-                  const maxWidth = Math.max(0, woodLength - x);
-                  const w = Math.max(0, Math.min(wRaw, maxWidth));
-                  const h = Math.max(hRaw, 1.5); // 最小显示高度，避免太细看不见
-                  if (w <= 0) return null;
-                  return (
-                    <rect
-                      key={i}
-                      x={x}
-                      y={yRaw}
-                      width={w}
-                      height={h}
-                      fill={color}
-                      stroke={color}
-                      strokeWidth="1"
-                    />
-                  );
-                })}
-                {/* 切割段：按产品着色 */}
-                {woodResponse && plan?.pieces?.map((p, i) => {
-                  const pid = p.productId ?? p.product_id;
-                  const color = productColorMap[pid] ?? `hsla(${200 + (i % 4) * 40}, 70%, 85%, 0.35)`;
-                  return (
+              <p className="subtext">加载展开图…</p>
+            </div>
+          )}
+          {((previewResponse && previewResponse.wood_id === selectedWoodId) || (woodResponse && woodResponse.wood_id === selectedWoodId)) && (() => {
+            const base = previewResponse?.wood_id === selectedWoodId
+              ? previewResponse
+              : woodResponse;
+            const len = base?.length ?? woodLength;
+            const w = base?.width ?? woodWidth;
+            const h = base?.height ?? woodHeight;
+            const ph = 2 * w + 2 * h;
+            const defects = base?.flattened_defects ?? base?.flattenedDefects ?? [];
+            const plan = woodResponse?.wood_id === selectedWoodId ? (woodResponse?.cutting_plan ?? woodResponse?.cuttingPlan) : null;
+            const defectClasses = [...new Set(defects.map((d) => d.defect_class ?? d.class ?? '缺陷'))];
+            const defectColors = ['rgba(185,28,28,0.55)', 'rgba(194,65,12,0.55)', 'rgba(120,53,15,0.55)', 'rgba(124,58,237,0.55)', 'rgba(20,83,45,0.55)'];
+            const vividProductFills = ['hsla(0, 95%, 58%, 0.5)', 'hsla(38, 100%, 52%, 0.5)', 'hsla(145, 70%, 42%, 0.55)', 'hsla(260, 90%, 58%, 0.5)', 'hsla(300, 85%, 55%, 0.5)'];
+            const vividProductLines = ['hsl(0, 95%, 48%)', 'hsl(38, 100%, 45%)', 'hsl(145, 70%, 35%)', 'hsl(260, 90%, 48%)', 'hsl(300, 85%, 45%)'];
+            const productIds = orderProducts.length > 0
+              ? orderProducts.map((p) => p.id)
+              : (plan ? [...new Map(plan.pieces?.map((p) => [p.product_id ?? p.productId, true]) ?? []).keys()] : []);
+            const productColor = (pid) => {
+              const idx = productIds.indexOf(pid);
+              return idx < 0 ? vividProductFills[0] : vividProductFills[idx % vividProductFills.length];
+            };
+            const productLineColor = (pid) => {
+              const idx = productIds.indexOf(pid);
+              return idx < 0 ? vividProductLines[0] : vividProductLines[idx % vividProductLines.length];
+            };
+            const defectColor = (cls) => defectColors[defectClasses.indexOf(cls) % defectColors.length];
+            if (!len || !ph) return null;
+            return (
+              <div key={base?.wood_id} className="panel" style={{ marginTop: 16 }}>
+                <h2>展开平面图与切割结果</h2>
+                {previewLoading && <p className="subtext">加载展开图…</p>}
+                <div className="metrics">
+                  <span className="metric-item">木材: {len} × {w} × {h} mm，展开 Y 高: {ph} mm</span>
+                  {plan && (
+                    <>
+                      <span className="metric-highlight">
+                        已用: {(plan.totalUsedLength ?? plan.total_used_length ?? 0).toFixed(0)} mm，段数: {plan.pieces?.length ?? 0}
+                      </span>
+                      {(plan.totalKerfMm ?? plan.total_kerf_mm) != null && (
+                        <span className="metric-item">锯缝: {plan.totalKerfMm ?? plan.total_kerf_mm} mm</span>
+                      )}
+                    </>
+                  )}
+                  <span className="metric-item">缺陷数: {defects.length}</span>
+                </div>
+                <svg
+                  className="unfolded-svg"
+                  viewBox={`0 0 ${len} ${ph}`}
+                  preserveAspectRatio="xMidYMid meet"
+                >
+                  {/* 展开面背景：上/右/下/左 */}
+                  <rect x={0} y={0} width={len} height={w} fill="#fef3c7" stroke="#d1d5db" strokeWidth="0.5" />
+                  <rect x={0} y={w} width={len} height={h} fill="#dbeafe" stroke="#d1d5db" strokeWidth="0.5" />
+                  <rect x={0} y={w + h} width={len} height={w} fill="#fef3c7" stroke="#d1d5db" strokeWidth="0.5" />
+                  <rect x={0} y={2 * w + h} width={len} height={h} fill="#dbeafe" stroke="#d1d5db" strokeWidth="0.5" />
+                  {/* 缺陷（按缺陷类型着色） */}
+                  {defects.map((d, i) => {
+                    const b = d.bbox_on_plane ?? d.bboxOnPlane ?? [];
+                    if (b.length < 4) return null;
+                    const cls = d.defect_class ?? d.class ?? '缺陷';
+                    return (
+                      <rect
+                        key={i}
+                        x={b[0]}
+                        y={b[1]}
+                        width={b[2]}
+                        height={b[3]}
+                        fill={defectColor(cls)}
+                        stroke="#374151"
+                        strokeWidth="1"
+                      />
+                    );
+                  })}
+                  {/* 切割后叠加：按产品着色 */}
+                  {plan?.pieces?.map((p, i) => (
                     <g key={`seg-${i}`}>
                       <rect
                         x={p.begin}
                         y={0}
                         width={p.length}
-                        height={planeHeight}
-                        fill={color}
+                        height={ph}
+                        fill={productColor(p.product_id ?? p.productId)}
                         stroke="none"
                       />
-                      {/* 底部分段线：凸显该段范围 */}
+                      {/* 底部线条凸显该段范围，按产品颜色区分，两端略缩短避免相连 */}
                       <line
                         x1={p.begin + 4}
-                        y1={planeHeight}
+                        y1={ph}
                         x2={p.begin + p.length - 4}
-                        y2={planeHeight}
-                        stroke={productLineColorMap[pid] ?? '#374151'}
+                        y2={ph}
+                        stroke={productLineColor(p.product_id ?? p.productId)}
                         strokeWidth={6}
                         strokeLinecap="round"
                       />
                     </g>
-                  );
-                })}
-              </svg>
-              <div className="legend">
-                {defectLegend.map((d) => (
-                  <span className="legend-item" key={d.name}>
-                    <span className="legend-color" style={{ background: d.color }} />
-                    {d.name}
-                  </span>
-                ))}
-                {Object.entries(productColorMap).map(([id, color]) => (
-                  <span className="legend-item" key={id}>
-                    <span className="legend-color" style={{ background: color }} />
-                    产品 {id}
-                  </span>
-                ))}
+                  ))}
+                </svg>
+                <div className="legend">
+                  {defectClasses.map((cls) => (
+                    <span key={cls} className="legend-item">
+                      <span className="legend-color" style={{ background: defectColor(cls) }} />
+                      {cls}
+                    </span>
+                  ))}
+                  {orderProducts.length > 0 && orderProducts.map((p) => (
+                    <span key={p.id} className="legend-item">
+                      <span className="legend-color" style={{ background: productColor(p.id) }} />
+                      产品 {p.id}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </>
       )}
     </div>
