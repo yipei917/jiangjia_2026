@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { demoOrderJson, demoWoods } from './demoData';
+import { demoOrderJson, demoWoods, defectnames } from './demoData';
 
 const API_BASE = 'http://127.0.0.1:8765';
 
@@ -306,8 +306,14 @@ export default function App() {
             const ph = 2 * w + 2 * h;
             const defects = base?.flattened_defects ?? base?.flattenedDefects ?? [];
             const plan = woodResponse?.wood_id === selectedWoodId ? (woodResponse?.cutting_plan ?? woodResponse?.cuttingPlan) : null;
-            const defectClasses = [...new Set(defects.map((d) => d.defect_class ?? d.class ?? '缺陷'))];
-            const defectColors = ['rgba(185,28,28,0.55)', 'rgba(194,65,12,0.55)', 'rgba(120,53,15,0.55)', 'rgba(124,58,237,0.55)', 'rgba(20,83,45,0.55)'];
+            // 缺陷颜色：高饱和、色相差距大
+            const defectColors = [
+              'rgba(239, 68, 68, 0.65)',   // 红
+              'rgba(34, 197, 94, 0.65)',   // 绿
+              'rgba(59, 130, 246, 0.65)',  // 蓝
+              'rgba(234, 179, 8, 0.75)',   // 黄
+              'rgba(168, 85, 247, 0.65)',  // 紫（备用）
+            ];
             const vividProductFills = ['hsla(0, 95%, 58%, 0.5)', 'hsla(38, 100%, 52%, 0.5)', 'hsla(145, 70%, 42%, 0.55)', 'hsla(260, 90%, 58%, 0.5)', 'hsla(300, 85%, 55%, 0.5)'];
             const vividProductLines = ['hsl(0, 95%, 48%)', 'hsl(38, 100%, 45%)', 'hsl(145, 70%, 35%)', 'hsl(260, 90%, 48%)', 'hsl(300, 85%, 45%)'];
             const productIds = orderProducts.length > 0
@@ -321,7 +327,13 @@ export default function App() {
               const idx = productIds.indexOf(pid);
               return idx < 0 ? vividProductLines[0] : vividProductLines[idx % vividProductLines.length];
             };
-            const defectColor = (cls) => defectColors[defectClasses.indexOf(cls) % defectColors.length];
+            const defectColor = (cls) => {
+              const idx = defectnames.indexOf(cls);
+              return idx < 0 ? defectColors[0] : defectColors[idx % defectColors.length];
+            };
+            const defectLegend = defectnames.filter((name) =>
+              defects.some((d) => (d.defect_class ?? d.class ?? '缺陷') === name),
+            );
             if (!len || !ph) return null;
             return (
               <div key={base?.wood_id} className="panel" style={{ marginTop: 16 }}>
@@ -394,7 +406,7 @@ export default function App() {
                   ))}
                 </svg>
                 <div className="legend">
-                  {defectClasses.map((cls) => (
+                  {defectLegend.map((cls) => (
                     <span key={cls} className="legend-item">
                       <span className="legend-color" style={{ background: defectColor(cls) }} />
                       {cls}
