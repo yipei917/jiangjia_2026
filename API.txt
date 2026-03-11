@@ -1,0 +1,224 @@
+后端接口对接文档
+================
+
+后端基地址: http://127.0.0.1:8765
+数据格式: 请求和响应都是 JSON。
+
+----------------------------------------
+一、订单接口 /orders
+----------------------------------------
+
+1. POST /orders  ——  加载或替换当前订单
+
+说明:
+  设置当前有效订单（会覆盖之前的订单），后续 /woods 会基于这个订单进行优化。
+
+请求示例 (对应 API.md 中的 JSON 示例):
+
+  {
+    "orderId": "ORDER-DEMO-MULTI-001",
+    "sawKerfMm": 4,
+    "products": [
+      {
+        "id": "P1",
+        "minLength": 500,
+        "maxLength": 500,
+        "minWidth": 100,
+        "maxWidth": 100,
+        "minHeight": 50,
+        "maxHeight": 50,
+        "refHeight": 50,
+        "refWidth": 100,
+        "qty": 10,
+        "value": 0.6,
+        "sections": [
+          {
+            "id": "S1",
+            "begin": 0,
+            "length": 500,
+            "zones": [
+              {
+                "id": "Z-all",
+                "begin": 0,
+                "length": 300,
+                "defectRules": [
+                  {
+                    "defectName": "Knot",
+                    "maxCount": 3,
+                    "defectLength": 40,
+                    "defectHeight": 40,
+                    "referenceLength": 500
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+
+响应示例:
+
+  {
+    "status": "ok",
+    "orderId": "ORDER-DEMO-MULTI-001",
+    "message": "order loaded as current"
+  }
+
+2. GET /orders/current  ——  查询当前订单
+
+说明:
+  返回最近一次通过 POST /orders 加载的订单。
+
+成功时:
+  返回完整的订单对象（结构和 POST /orders 的请求体相同）。
+
+尚未加载订单时:
+
+  状态码: 404
+  返回:
+    {
+      "detail": "当前尚未加载任何订单，请先调用 POST /orders。"
+    }
+
+
+----------------------------------------
+二、木材接口 /woods
+----------------------------------------
+
+1. POST /woods/preview  ——  仅展开缺陷（不计算切割方案）
+
+说明:
+  只做缺陷坐标展开，用于前端预览，不依赖订单。
+
+请求示例:
+
+  {
+    "wood": {
+      "woodId": "WOOD-DEMO-001",
+      "length": 1798.08,
+      "width": 62.04,
+      "height": 18,
+      "imgwidth": 3746,
+      "imgheight": 129,
+      "defectDetails": {
+        "top": [
+          { "bbox": [135, 1, 12, 142], "class": "crack" }
+        ],
+        "bottom": [],
+        "left": [],
+        "right": []
+      }
+    }
+  }
+
+响应示例:
+
+  {
+    "woodId": "WOOD-DEMO-001",
+    "flattenedDefects": [
+      {
+        "woodId": "WOOD-DEMO-001",
+        "class": "crack",
+        "face": "top",
+        "bboxOnPlane": [0, 0, 10, 20]
+      }
+    ]
+  }
+
+
+2. POST /woods  ——  处理木材并返回切割方案
+
+说明:
+  1. 依赖当前订单（需要先调用 POST /orders）。
+  2. 展开四面缺陷到统一平面坐标系。
+  3. 调用优化引擎生成切割方案；目前会从左往右、从右往左各算一次，取 totalValue 更高的方案。
+
+请求示例:
+
+  {
+    "wood": {
+      "woodId": "WOOD-DEMO-001",
+      "length": 1798.08,
+      "width": 62.04,
+      "height": 18,
+      "imgwidth": 3746,
+      "imgheight": 129,
+      "defectDetails": {
+        "top": [
+          { "bbox": [135, 1, 12, 142], "class": "crack" }
+        ],
+        "bottom": [],
+        "left": [],
+        "right": []
+      }
+    }
+  }
+
+响应结构示例:
+
+  {
+    "woodId": "WOOD-DEMO-001",
+    "flattenedDefects": [
+      {
+        "woodId": "WOOD-DEMO-001",
+        "class": "crack",
+        "face": "top",
+        "bboxOnPlane": [0, 0, 10, 20]
+      }
+    ],
+    "cuttingPlan": {
+      "woodId": "WOOD-DEMO-001",
+      "pieces": [
+        {
+          "begin": 0,
+          "length": 500,
+          "productId": "P1",
+          "value": 0.6
+        }
+      ],
+      "totalValue": 3.0,
+      "totalUsedLength": 1500,
+      "wasteLength": 298.08,
+      "totalKerfMm": 8,
+      "satisfiedProducts": [
+        {
+          "productId": "P1",
+          "producedQty": 3,
+          "requiredQty": 10
+        }
+      ]
+    },
+    "optimizationStatus": "completed",
+    "elapsedMs": 12.34
+  }
+
+错误情况示例:
+
+- 未加载订单直接调用 /woods:
+
+  状态码: 422
+  返回:
+    {
+      "detail": "当前尚未加载任何订单，请先调用 POST /orders。"
+    }
+
+
+----------------------------------------
+三、典型调用顺序
+----------------------------------------
+
+1. 启动后端: 在项目根目录执行
+
+   python main.py
+
+2. 加载订单:
+
+   调用 POST /orders
+
+3. 对每根木材:
+
+   - 可选: 调用 POST /woods/preview 获取展开后的缺陷，用于展示。
+   - 必要: 调用 POST /woods 获取切割方案 cuttingPlan。
+
