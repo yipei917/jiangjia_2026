@@ -97,14 +97,15 @@
   {
     "wood": {
       "woodId": "WOOD-DEMO-001",
-      "length": 1798.08,
-      "width": 62.04,
-      "height": 18,
-      "imgwidth": 3746,
-      "imgheight": 129,
+      "length": 2402.4,
+      "width": 123.84,
+      "height": 44.16,
+      "imglength": 5005,
+      "imgwidth": 258,
+      "imgheight": 92,
       "defectDetails": {
         "top": [
-          { "bbox": [135, 1, 12, 142], "class": "crack" }
+          { "bbox": [85, 1209, 44, 35], "class": "black knot" }
         ],
         "bottom": [],
         "left": [],
@@ -112,6 +113,7 @@
       }
     }
   }
+
 
 响应示例:
 
@@ -132,7 +134,7 @@
 
 说明:
   1. 依赖当前订单（需要先调用 POST /orders）。
-  2. 展开四面缺陷到统一平面坐标系。
+  2. 展开四面缺陷到统一平面坐标系（像素 bbox 的转换规则同 POST /woods/preview）。
   3. 调用优化引擎生成切割方案；目前会从左往右、从右往左各算一次，取 totalValue 更高的方案。
 
 请求示例:
@@ -140,14 +142,15 @@
   {
     "wood": {
       "woodId": "WOOD-DEMO-001",
-      "length": 1798.08,
-      "width": 62.04,
-      "height": 18,
-      "imgwidth": 3746,
-      "imgheight": 129,
+      "length": 2402.4,
+      "width": 123.84,
+      "height": 44.16,
+      "imglength": 5005,
+      "imgwidth": 258,
+      "imgheight": 92,
       "defectDetails": {
         "top": [
-          { "bbox": [135, 1, 12, 142], "class": "crack" }
+          { "bbox": [85, 1209, 44, 35], "class": "black knot" }
         ],
         "bottom": [],
         "left": [],
