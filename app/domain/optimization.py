@@ -258,13 +258,14 @@ def optimize(
     plan_ltr = _optimize_one_direction(wood, order, flattened_defects, direction="ltr")
     plan_rtl = _optimize_one_direction(wood, order, flattened_defects, direction="rtl")
 
-    if plan_rtl.totalValue > plan_ltr.totalValue:
+    # CuttingPlan 内部字段为 total_value，JSON 中通过别名 totalValue 暴露
+    if plan_rtl.total_value > plan_ltr.total_value:
         logger.info(
             "选择右向切割方案",
             extra={
                 "wood_id": wood.wood_id,
-                "left_to_right_value": plan_ltr.totalValue,
-                "right_to_left_value": plan_rtl.totalValue,
+                "left_to_right_value": plan_ltr.total_value,
+                "right_to_left_value": plan_rtl.total_value,
             },
         )
         return plan_rtl
@@ -273,8 +274,8 @@ def optimize(
         "选择左向切割方案",
         extra={
             "wood_id": wood.wood_id,
-            "left_to_right_value": plan_ltr.totalValue,
-            "right_to_left_value": plan_rtl.totalValue,
+            "left_to_right_value": plan_ltr.total_value,
+            "right_to_left_value": plan_rtl.total_value,
         },
     )
     return plan_ltr

@@ -1,9 +1,10 @@
-export const demoOrderJson = {
+export const demoOrderJson = { // 1 产品 2 指接料 3 废料
   orderId: 'ORDER-DEMO-MULTI-001',
   sawKerfMm: 4, // 锯片厚度
   products: [
     {
       id: 'P1',
+      type: 1,
       minLength: 500,
       maxLength: 500,
       minWidth: 100,
