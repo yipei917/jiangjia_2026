@@ -24,7 +24,17 @@
 
 2. 第一次在新环境启动前端前，建议先清理后重新安装依赖：
 
-   rm -rf node_modules package-lock.json
+   - Linux / macOS / Git Bash：
+     rm -rf node_modules package-lock.json
+
+   - Windows（PowerShell）：
+     Remove-Item -Recurse -Force node_modules, package-lock.json -ErrorAction SilentlyContinue
+
+   - Windows（CMD 命令提示符）：
+     if exist node_modules rmdir /s /q node_modules
+     if exist package-lock.json del package-lock.json
+
+   然后执行：
    npm install
 
 3. 启动前端开发服务器：

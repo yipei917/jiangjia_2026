@@ -120,6 +120,8 @@ class Wood(BaseModel):
     height: float = Field(gt=0)
     defect_details: WoodDefectDetails = Field(alias="defectDetails")
     # 当缺陷 bbox 为相对于图片的像素坐标时必填，用于转换为木材物理坐标（仅 top/bottom 面）
+    # 图片尺寸：imglength 对应长度方向，imgwidth 对应宽度方向，imgheight 对应侧面高度
+    imglength: Optional[float] = Field(default=None, gt=0)
     imgwidth: Optional[float] = Field(default=None, gt=0)
     imgheight: Optional[float] = Field(default=None, gt=0)
 
