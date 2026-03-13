@@ -51,6 +51,8 @@ class Product(BaseModel):
     model_config = _COMMON_CFG
 
     id: str
+    # type: 1=常规产品；2=指接料（仅在常规产品切完后，用剩余木材尽量取长料）
+    type: int = Field(default=1, ge=1)
     min_length: Optional[float] = Field(alias="minLength", default=None, ge=0)
     max_length: Optional[float] = Field(alias="maxLength", default=None, ge=0)
     min_width: Optional[float] = Field(alias="minWidth", default=None, ge=0)

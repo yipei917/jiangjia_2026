@@ -105,13 +105,14 @@ def _optimize_one_direction(
         best_length = 0.0
         best_value = 0.0
 
+        # 第 1 步：只在「常规产品（type != 2）」里贪心选择
         for product in products_sorted:
+            if product.type == 2:
+                continue
             if remaining_qty[product.id] <= 0:
                 continue
 
             min_len = _min_length(product)
-
-            # 最后一段不需要保留额外锯缝，直接与剩余长度比较
             if remaining_length < min_len:
                 continue
 
@@ -132,8 +133,40 @@ def _optimize_one_direction(
                 best_length = min_len
                 best_value = candidate_value
 
+        # 第 2 步：如果当前这段木材已经裁不出任何常规产品，
+        # 再尝试使用指接料（type=2），用剩余长度在允许范围内尽量取长。
         if best_product is None:
-            # 跳步：找下一个缺陷终点，跳过当前缺陷遮挡区域
+            for product in products_sorted:
+                if product.type != 2:
+                    continue
+                if remaining_qty[product.id] <= 0:
+                    continue
+
+                min_len = _min_length(product)
+                if remaining_length < min_len:
+                    continue
+
+                max_len = float(getattr(product, "max_length", None) or remaining_length)
+                piece_length = min(remaining_length, max_len)
+
+                if direction == "ltr":
+                    piece_begin = cur_pos
+                else:
+                    piece_begin = wood_length - cur_pos - piece_length
+
+                if not _piece_passes_rules(product, piece_begin, piece_length, sorted_defects):
+                    continue
+
+                candidate_value = float(product.value)
+                if best_product is None or candidate_value > best_value or (
+                    candidate_value == best_value and piece_length > best_length
+                ):
+                    best_product = product
+                    best_length = piece_length
+                    best_value = candidate_value
+
+        if best_product is None:
+            # 既裁不出常规产品，也裁不出指接料：按原来的逻辑做缺陷跳步或结束。
             idx = bisect.bisect_right(defect_x1s, cur_pos)
             if idx < len(defect_x1s):
                 next_pos = defect_x1s[idx]

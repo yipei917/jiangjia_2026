@@ -112,6 +112,43 @@ export const demoOrderJson = { // 1 产品 2 指接料 3 废料
           ]
         }
       ]
+    },
+    {
+      id: 'P4',
+      type: 2,
+      minLength: 20,
+      maxLength: 500,
+      minWidth: 100,
+      maxWidth: 100,
+      minHeight: 50,
+      maxHeight: 50,
+      refHeight: 50,
+      refWidth: 100,
+      qty: 10,
+      value: 0.2,
+      sections: [
+        {
+          id: 'S1',
+          begin: 0,
+          length: 20,
+          zones: [
+            {
+              id: 'Z-all',
+              begin: 0,
+              length: 20,
+              defectRules: [
+                {
+                  defectName: 'Knot',
+                  maxCount: 9999,
+                  defectLength: 9999,
+                  defectHeight: 9999,
+                  referenceLength: 20
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ]
 };
