@@ -41,6 +41,7 @@ export const demoOrderJson = { // 1 产品 2 指接料 3 废料
     },
     {
       id: 'P2',
+      type: 1,
       minLength: 1000,
       maxLength: 1000,
       minWidth: 100,
@@ -77,6 +78,7 @@ export const demoOrderJson = { // 1 产品 2 指接料 3 废料
     },
     {
       id: 'P3',
+      type: 1,
       minLength: 2000,
       maxLength: 2000,
       minWidth: 100,
