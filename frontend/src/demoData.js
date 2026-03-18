@@ -1,37 +1,100 @@
-export const demoOrderJson = { // 1 产品 2 指接料 3 废料
-  orderId: 'ORDER-DEMO-MULTI-001',
-  sawKerfMm: 4, // 锯片厚度
-  products: [
+export const demoOrderJson = {
+  "orderId": "1",
+  "sawKerfMm": 4,
+  "products": [
     {
-      id: 'P1',
-      type: 1,
-      minLength: 500,
-      maxLength: 500,
-      minWidth: 100,
-      maxWidth: 100,
-      minHeight: 50,
-      maxHeight: 50,
-      refHeight: 50,
-      refWidth: 100,
-      qty: 10,
-      value: 0.6,
-      sections: [
+      "id": "1",
+      "type": 1,
+      "minLength": 300,
+      "maxLength": 0,
+      "minWidth": 100,
+      "maxWidth": 0,
+      "minHeight": 25,
+      "maxHeight": 0,
+      "refHeight": 25,
+      "refWidth": 100,
+      "qty": 50,
+      "value": 0.6,
+      "sections": [
         {
-          id: 'S1',
-          begin: 0,
-          length: 500,
-          zones: [
+          "id": "1",
+          "begin": 0,
+          "length": 300,
+          "zones": [
             {
-              id: 'Z-all',
-              begin: 0,
-              length: 300,
-              defectRules: [
+              "id": "20",
+              "begin": 0,
+              "length": 250,
+              "defectRules": [
                 {
-                  defectName: 'Knot',
-                  maxCount: 3,
-                  defectLength: 40,
-                  defectHeight: 40,
-                  referenceLength: 500
+                  "defectName": "black knot",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "sound knot",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "crack",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "resin",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "wormhole",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "materialleak",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "bluestain",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "decay",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "barkpocket",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "skip",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
                 }
               ]
             }
@@ -40,35 +103,98 @@ export const demoOrderJson = { // 1 产品 2 指接料 3 废料
       ]
     },
     {
-      id: 'P2',
-      type: 1,
-      minLength: 1000,
-      maxLength: 1000,
-      minWidth: 100,
-      maxWidth: 100,
-      minHeight: 50,
-      maxHeight: 50,
-      refHeight: 50,
-      refWidth: 100,
-      qty: 10,
-      value: 0.8,
-      sections: [
+      "id": "2",
+      "type": 1,
+      "minLength": 500,
+      "maxLength": 0,
+      "minWidth": 100,
+      "maxWidth": 0,
+      "minHeight": 25,
+      "maxHeight": 0,
+      "refHeight": 25,
+      "refWidth": 100,
+      "qty": 50,
+      "value": 0.7,
+      "sections": [
         {
-          id: 'S1',
-          begin: 0,
-          length: 1000,
-          zones: [
+          "id": "2",
+          "begin": 0,
+          "length": 500,
+          "zones": [
             {
-              id: 'Z-all',
-              begin: 0,
-              length: 300,
-              defectRules: [
+              "id": "21",
+              "begin": 0,
+              "length": 250,
+              "defectRules": [
                 {
-                  defectName: 'Knot',
-                  maxCount: 3,
-                  defectLength: 40,
-                  defectHeight: 40,
-                  referenceLength: 1000
+                  "defectName": "black knot",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "sound knot",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "crack",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "resin",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "wormhole",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "materialleak",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "bluestain",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "decay",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "barkpocket",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "skip",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
                 }
               ]
             }
@@ -77,35 +203,98 @@ export const demoOrderJson = { // 1 产品 2 指接料 3 废料
       ]
     },
     {
-      id: 'P3',
-      type: 1,
-      minLength: 2000,
-      maxLength: 2000,
-      minWidth: 100,
-      maxWidth: 100,
-      minHeight: 50,
-      maxHeight: 50,
-      refHeight: 50,
-      refWidth: 100,
-      qty: 10,
-      value: 1.0,
-      sections: [
+      "id": "4",
+      "type": 1,
+      "minLength": 800,
+      "maxLength": 0,
+      "minWidth": 100,
+      "maxWidth": 0,
+      "minHeight": 25,
+      "maxHeight": 0,
+      "refHeight": 25,
+      "refWidth": 100,
+      "qty": 50,
+      "value": 0.8,
+      "sections": [
         {
-          id: 'S1',
-          begin: 0,
-          length: 2000,
-          zones: [
+          "id": "10",
+          "begin": 0,
+          "length": 800,
+          "zones": [
             {
-              id: 'Z-all',
-              begin: 0,
-              length: 300,
-              defectRules: [
+              "id": "22",
+              "begin": 0,
+              "length": 250,
+              "defectRules": [
                 {
-                  defectName: 'Knot',
-                  maxCount: 3,
-                  defectLength: 40,
-                  defectHeight: 40,
-                  referenceLength: 2000
+                  "defectName": "black knot",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "sound knot",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "crack",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "resin",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "wormhole",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "materialleak",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "bluestain",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "decay",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "barkpocket",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "skip",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
                 }
               ]
             }
@@ -114,35 +303,552 @@ export const demoOrderJson = { // 1 产品 2 指接料 3 废料
       ]
     },
     {
-      id: 'P4',
-      type: 2,
-      minLength: 20,
-      maxLength: 500,
-      minWidth: 100,
-      maxWidth: 100,
-      minHeight: 50,
-      maxHeight: 50,
-      refHeight: 50,
-      refWidth: 100,
-      qty: 10,
-      value: 0.2,
-      sections: [
+      "id": "5",
+      "type": 1,
+      "minLength": 1100,
+      "maxLength": 0,
+      "minWidth": 100,
+      "maxWidth": 0,
+      "minHeight": 25,
+      "maxHeight": 0,
+      "refHeight": 25,
+      "refWidth": 100,
+      "qty": 50,
+      "value": 0.9,
+      "sections": [
         {
-          id: 'S1',
-          begin: 0,
-          length: 20,
-          zones: [
+          "id": "11",
+          "begin": 0,
+          "length": 1100,
+          "zones": [
             {
-              id: 'Z-all',
-              begin: 0,
-              length: 20,
-              defectRules: [
+              "id": "23",
+              "begin": 0,
+              "length": 250,
+              "defectRules": [
                 {
-                  defectName: 'Knot',
-                  maxCount: 9999,
-                  defectLength: 9999,
-                  defectHeight: 9999,
-                  referenceLength: 20
+                  "defectName": "black knot",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "sound knot",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "crack",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "resin",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "wormhole",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "materialleak",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "bluestain",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "decay",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "barkpocket",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "skip",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "6",
+      "type": 1,
+      "minLength": 1500,
+      "maxLength": 0,
+      "minWidth": 100,
+      "maxWidth": 0,
+      "minHeight": 25,
+      "maxHeight": 0,
+      "refHeight": 25,
+      "refWidth": 100,
+      "qty": 50,
+      "value": 1.0,
+      "sections": [
+        {
+          "id": "12",
+          "begin": 0,
+          "length": 1500,
+          "zones": [
+            {
+              "id": "24",
+              "begin": 0,
+              "length": 250,
+              "defectRules": [
+                {
+                  "defectName": "black knot",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "sound knot",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "crack",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "resin",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "wormhole",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "materialleak",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "bluestain",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "decay",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "barkpocket",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "skip",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "9",
+      "type": 1,
+      "minLength": 500,
+      "maxLength": 0,
+      "minWidth": 100,
+      "maxWidth": 0,
+      "minHeight": 25,
+      "maxHeight": 0,
+      "refHeight": 25,
+      "refWidth": 100,
+      "qty": 50,
+      "value": 0.5,
+      "sections": [
+        {
+          "id": "15",
+          "begin": 0,
+          "length": 500,
+          "zones": [
+            {
+              "id": "25",
+              "begin": 0,
+              "length": 100,
+              "defectRules": [
+                {
+                  "defectName": "black knot",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "sound knot",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "crack",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "resin",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "wormhole",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "materialleak",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "bluestain",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "decay",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "barkpocket",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "skip",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                }
+              ]
+            },
+            {
+              "id": "26",
+              "begin": 100,
+              "length": 150,
+              "defectRules": [
+                {
+                  "defectName": "black knot",
+                  "maxCount": 0,
+                  "defectLength": 15,
+                  "defectHeight": 15,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "sound knot",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "crack",
+                  "maxCount": 3,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "resin",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "wormhole",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "materialleak",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "bluestain",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "decay",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "barkpocket",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "skip",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10",
+      "type": 1,
+      "minLength": 1000,
+      "maxLength": 0,
+      "minWidth": 100,
+      "maxWidth": 0,
+      "minHeight": 25,
+      "maxHeight": 0,
+      "refHeight": 25,
+      "refWidth": 100,
+      "qty": 50,
+      "value": 0.8,
+      "sections": [
+        {
+          "id": "16",
+          "begin": 0,
+          "length": 1000,
+          "zones": [
+            {
+              "id": "27",
+              "begin": 0,
+              "length": 100,
+              "defectRules": [
+                {
+                  "defectName": "black knot",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "sound knot",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "crack",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "resin",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "wormhole",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "materialleak",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "bluestain",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "decay",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "barkpocket",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "skip",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                }
+              ]
+            },
+            {
+              "id": "28",
+              "begin": 100,
+              "length": 150,
+              "defectRules": [
+                {
+                  "defectName": "black knot",
+                  "maxCount": 0,
+                  "defectLength": 15,
+                  "defectHeight": 15,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "sound knot",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "crack",
+                  "maxCount": 3,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "resin",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "wormhole",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "materialleak",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "bluestain",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "decay",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "barkpocket",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
+                },
+                {
+                  "defectName": "skip",
+                  "maxCount": 0,
+                  "defectLength": 0,
+                  "defectHeight": 0,
+                  "referenceLength": 1
                 }
               ]
             }
@@ -151,7 +857,8 @@ export const demoOrderJson = { // 1 产品 2 指接料 3 废料
       ]
     }
   ]
-};
+}
+;
 
 export const defectnames = [
   "crack",
@@ -161,6 +868,91 @@ export const defectnames = [
 ];
 
 export const demoWoods = [
+  {
+    "woodId": "WOOD",
+    "length": 2488.32,
+    "width": 100.00,
+    "height": 25.00,
+    "imglength": 5184,
+    "imgwidth": 222,
+    "imgheight": 61,
+    "defectDetails": {
+      "top": [
+    {"bbox": [168,391,52,38], "class": "sound knot"},
+    {"bbox": [98,652,18,19], "class": "wormhole"},
+    {"bbox": [25,1490,21,38], "class": "resin"},
+    {"bbox": [7,3142,110,133], "class": "sound knot"},
+    {"bbox": [167,3123,53,146], "class": "sound knot"},
+    {"bbox": [181,3127,39,130], "class": "sound knot"},
+    {"bbox": [56,3559,107,117], "class": "sound knot"},
+    {"bbox": [60,4327,84,57], "class": "black knot"},
+    {"bbox": [61,4370,85,60], "class": "black knot"},
+    {"bbox": [70,4370,71,50], "class": "black knot"},
+    {"bbox": [189,4787,32,213], "class": "wane"},
+    {"bbox": [172,4788,49,215], "class": "wane"},
+    {"bbox": [158,4995,61,184], "class": "wane"},
+    {"bbox": [164,4995,56,114], "class": "wane"},
+    {"bbox": [158,5032,61,175], "class": "wane"}],
+      "right": [
+{"bbox": [0,0,55,10], "class": "black knot"},
+    {"bbox": [0,0,55,16], "class": "black knot"},
+    {"bbox": [1,1887,55,61], "class": "sound knot"},
+    {"bbox": [1,1944,56,60], "class": "sound knot"},
+    {"bbox": [1,2115,55,60], "class": "sound knot"},
+    {"bbox": [1,2173,56,60], "class": "sound knot"},
+    {"bbox": [2,2230,55,60], "class": "sound knot"},
+    {"bbox": [0,3031,55,60], "class": "sound knot"},
+    {"bbox": [4,3104,53,44], "class": "sound knot"},
+    {"bbox": [0,3088,56,60], "class": "sound knot"},
+    {"bbox": [1,3202,57,61], "class": "sound knot"},
+    {"bbox": [1,3431,55,60], "class": "sound knot"},
+    {"bbox": [0,3488,56,60], "class": "sound knot"},
+    {"bbox": [1,3545,57,60], "class": "sound knot"},
+    {"bbox": [0,3603,57,60], "class": "sound knot"},
+    {"bbox": [1,3660,57,60], "class": "sound knot"},
+    {"bbox": [1,5211,59,0], "class": "wane"}],
+      "bottom": [ 
+{"bbox": [11,3188,147,127], "class": "sound knot"},
+    {"bbox": [56,3190,97,118], "class": "sound knot"},
+    {"bbox": [66,3615,69,79], "class": "sound knot"},
+    {"bbox": [60,3591,88,111], "class": "sound knot"},
+    {"bbox": [44,3570,111,137], "class": "sound knot"},
+    {"bbox": [78,3626,47,54], "class": "sound knot"},
+    {"bbox": [70,4361,86,95], "class": "sound knot"},
+    {"bbox": [1,5215,195,0], "class": "wane"}      
+      ],
+      "left": [  
+{"bbox": [4,393,56,23], "class": "sound knot"},
+    {"bbox": [4,354,56,62], "class": "sound knot"},
+    {"bbox": [4,374,56,43], "class": "sound knot"},
+    {"bbox": [3,413,58,62], "class": "sound knot"},
+    {"bbox": [3,1772,57,62], "class": "sound knot"},
+    {"bbox": [3,2008,56,62], "class": "sound knot"},
+    {"bbox": [2,2067,58,62], "class": "sound knot"},
+    {"bbox": [2,2362,57,62], "class": "sound knot"},
+    {"bbox": [2,3189,40,61], "class": "sound knot"},
+    {"bbox": [1,3189,57,62], "class": "sound knot"},
+    {"bbox": [1,3721,58,62], "class": "sound knot"},
+    {"bbox": [2,4801,12,45], "class": "wane"},
+    {"bbox": [3,4843,19,62], "class": "wane"},
+    {"bbox": [3,4843,29,62], "class": "wane"},
+    {"bbox": [4,4843,17,62], "class": "resin"},
+    {"bbox": [5,4902,19,62], "class": "resin"},
+    {"bbox": [5,4902,20,62], "class": "wane"},
+    {"bbox": [4,4961,21,62], "class": "wane"},
+    {"bbox": [4,4961,31,62], "class": "wane"},
+    {"bbox": [5,5020,27,62], "class": "wane"},
+    {"bbox": [3,5020,40,62], "class": "wane"},
+    {"bbox": [5,5079,31,63], "class": "wane"},
+    {"bbox": [2,5079,46,62], "class": "wane"},
+    {"bbox": [5,5138,23,62], "class": "wane"},
+    {"bbox": [5,5175,28,26], "class": "wane"},
+    {"bbox": [1,5211,60,0], "class": "wane"},
+    {"bbox": [4,5197,23,14], "class": "wane"},
+    {"bbox": [4,5197,34,14], "class": "wane"}    
+      ]
+    }
+  },
   {
     "woodId": "WOOD-DEMO-001",
     "length": 2402.4,
