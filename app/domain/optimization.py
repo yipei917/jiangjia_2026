@@ -136,7 +136,7 @@ def _optimize_one_direction(
         # 从右往左：在“从右起算”的坐标系中，缺陷终点 = wood_length - x0
         defect_x1s = sorted({wood_length - float(d.bbox_on_plane[0]) for d in sorted_defects})
 
-    logger.info(
+    logger.debug(
         "开始执行贪心优化",
         extra={
             "wood_id": wood.wood_id,
@@ -233,7 +233,7 @@ def _optimize_one_direction(
             idx = bisect.bisect_right(defect_x1s, cur_pos)
             if idx < len(defect_x1s):
                 next_pos = defect_x1s[idx]
-                logger.info(
+                logger.debug(
                     "无可行产品，跳步到下一缺陷终点",
                     extra={
                         "wood_id": wood.wood_id,
@@ -245,7 +245,7 @@ def _optimize_one_direction(
                 cur_pos = next_pos
                 continue
             else:
-                logger.info(
+                logger.debug(
                     "贪心优化结束：无更多可跳步位置",
                     extra={"wood_id": wood.wood_id, "direction": direction, "cur_x": cur_pos},
                 )
@@ -283,7 +283,7 @@ def _optimize_one_direction(
         )
 
         if all(qty <= 0 for qty in remaining_qty.values()):
-            logger.info(
+            logger.debug(
                 "贪心优化结束：已满足所有产品数量需求",
                 extra={"wood_id": wood.wood_id, "direction": direction},
             )
@@ -319,7 +319,7 @@ def _optimize_one_direction(
         satisfiedProducts=satisfied_products,
     )
 
-    logger.info(
+    logger.debug(
         "贪心优化完成",
         extra={
             "wood_id": wood.wood_id,
@@ -356,7 +356,7 @@ def optimize(
 
     # CuttingPlan 内部字段为 total_value，JSON 中通过别名 totalValue 暴露
     if plan_rtl.total_value > plan_ltr.total_value:
-        logger.info(
+        logger.debug(
             "选择右向切割方案",
             extra={
                 "wood_id": wood.wood_id,
@@ -366,7 +366,7 @@ def optimize(
         )
         return plan_rtl
 
-    logger.info(
+    logger.debug(
         "选择左向切割方案",
         extra={
             "wood_id": wood.wood_id,
