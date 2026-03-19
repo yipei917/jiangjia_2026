@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { demoOrderJson, demoWoods, defectnames } from './demoData';
 
 const API_BASE = 'http://127.0.0.1:8765';
+// const API_BASE = 'http://192.168.1.221:8765';
 
 function pretty(obj) {
   return JSON.stringify(obj, null, 2);

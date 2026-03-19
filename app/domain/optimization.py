@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import bisect
 from collections import Counter
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 from app.domain.models import CutPiece, CuttingPlan, Section, SatisfiedProduct
 from app.domain.rule_engine import check_piece as rule_check_piece
@@ -47,6 +47,58 @@ def _piece_passes_rules(
         zones=section.zones,
     )
     return rule_check_piece(product, piece_section, sorted_defects).passed
+
+
+def _longest_finger_joint_length(
+    product: "Product",
+    cur_pos: float,
+    wood_length: float,
+    direction: str,
+    min_len: float,
+    cap: float,
+    sorted_defects: List["FlattenedDefect"],
+) -> Optional[float]:
+    """
+    指接料在 [min_len, cap] 内取**能通过缺陷规则的最长**切段长度。
+
+    对固定起点（ltr 起点为 cur_pos；rtl 为右端对齐），切段沿长度方向延伸，
+    区间变长时落入各 Zone 的缺陷只会增多，规则判定通常单调：
+    若长度 L 能通过，则任意更短的 L' 也能通过。
+    因此可用二分在浮点区间上求最大可行长度。
+    """
+    if cap < min_len - 1e-9:
+        return None
+
+    def piece_begin_for(length_mm: float) -> float:
+        if direction == "ltr":
+            return cur_pos
+        return wood_length - cur_pos - length_mm
+
+    def ok(length_mm: float) -> bool:
+        return _piece_passes_rules(
+            product,
+            piece_begin_for(length_mm),
+            length_mm,
+            sorted_defects,
+        )
+
+    if ok(cap):
+        return cap
+    if not ok(min_len):
+        return None
+
+    lo, hi = float(min_len), float(cap)
+    best = lo
+    for _ in range(48):
+        if hi - lo < 1e-4:
+            break
+        mid = (lo + hi) / 2.0
+        if ok(mid):
+            best = mid
+            lo = mid
+        else:
+            hi = mid
+    return best
 
 
 def _optimize_one_direction(
@@ -146,16 +198,27 @@ def _optimize_one_direction(
                 if remaining_length < min_len:
                     continue
 
+                # 与历史逻辑一致：max_length 未传或为 0 时视为用满剩余长度
                 max_len = float(getattr(product, "max_length", None) or remaining_length)
-                piece_length = min(remaining_length, max_len)
+                cap = min(remaining_length, max_len)
+                # 关键：不能只试 cap 一次——cap 越大段越长，缺陷规则越容易失败；
+                # 应在 [min_len, cap] 内取**最长仍能通过规则**的长度，避免 maxLength 变大反而切不出指接料。
+                piece_length = _longest_finger_joint_length(
+                    product,
+                    cur_pos,
+                    wood_length,
+                    direction,
+                    min_len,
+                    cap,
+                    sorted_defects,
+                )
+                if piece_length is None:
+                    continue
 
                 if direction == "ltr":
                     piece_begin = cur_pos
                 else:
                     piece_begin = wood_length - cur_pos - piece_length
-
-                if not _piece_passes_rules(product, piece_begin, piece_length, sorted_defects):
-                    continue
 
                 candidate_value = float(product.value)
                 if best_product is None or candidate_value > best_value or (
