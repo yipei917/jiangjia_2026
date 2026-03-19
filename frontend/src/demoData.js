@@ -864,6 +864,8 @@ export const defectnames = [
   "crack",
   "resin",
   "black knot",
+  "sound knot",
+  "wane",
   "wormhole"
 ];
 
